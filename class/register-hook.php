@@ -53,6 +53,10 @@ class Beyond_Wpdb_Register_Hook {
 	 * @return void
 	 */
 	public static function activation_error( string $error ) : void {
+		// Duplicate error avoidance on re-activation.
+		global $beyond_wpdb_sql;
+		$beyond_wpdb_sql->drop_triggers();
+
 		wp_die( $error );
 		exit;
 	}
