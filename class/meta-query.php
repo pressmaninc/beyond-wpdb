@@ -2,6 +2,7 @@
 class Beyond_Wpdb_Meta_Query {
 	// WP_Meta_Query::is_first_order_clauseと同一で大丈夫かも
 	protected function is_first_order_clause( $query ) {
+		return isset( $query['key'] ) || isset( $query['value'] );
 	}
 
 	// get_meta_sql hookで呼ばれる関数
@@ -37,6 +38,34 @@ class Beyond_Wpdb_Meta_Query {
 	protected function check( $query ) {
 		// is_first_order_clauseを活用して再帰的に判断する必要あり
 		// 再帰的に確認する方法としてはWP_Meta_Query::get_sql_for_queryが参考になる
+		if (!is_array($query)) {
+			return false;
+		}
+
+		foreach ($query as $key => $clause) {
+			if (is_array($clause)) {
+				if ($this->is_first_order_clause( $clause )) {
+					if (!$this->checkColumns($clause)) {
+						return false;
+					}
+				} else {
+					if ($this->check($clause)) {
+						continue;
+					} else {
+						return false;
+					}
+				}
+			}
+		}
+
+		return true;
+	}
+
+	//　変換条件チェック
+	protected function checkColumns($columns) {
+		return isset( $columns['key'] ) &&
+		       isset( $columns['value'] ) &&
+		       (isset( $columns['compare'] ) && ($columns['compare'] === '=' || $columns['compare'] === 'EXISTS'));
 	}
 
 	// jsonの独自テーブルのテーブル名を返す
