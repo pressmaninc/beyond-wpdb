@@ -18,49 +18,12 @@ class BeyondWpdbTest extends WP_UnitTestCase {
 			array(
 				'key'     => 'key1',
 				'value'   => 'value1',
-				'compare' => '=',
+				'compare_key' => '=',
 			),
 			array(
 				'key'     => 'key2',
 				'value'   => 'value2',
-				'compare' => '=',
-			)
-		);
-
-		// protectedなのでアクセス許可
-		$metaQuery = new Beyond_Wpdb_Meta_Query();
-		$reflection = new ReflectionClass($metaQuery);
-		$method = $reflection->getMethod('check');
-		$method->setAccessible(true);
-		$this->assertTrue( $method->invoke($metaQuery, $queries) );
-	}
-
-	/**
-	 * queries再帰的チェック - 成功
-	 */
-	public function test_check_recursive_success() {
-		$queries = array(
-			array(
-				'key'     => 'key1',
-				'value'   => 'value1',
-				'compare' => '=',
-			),
-			array(
-				'key'     => 'key2',
-				'value'   => 'value2',
-				'compare' => '=',
-			),
-			array(
-				array(
-					'key'     => 'key3',
-					'value'   => 'value3',
-					'compare' => '=',
-				),
-				array(
-					'key'     => 'key4',
-					'value'   => 'value4',
-					'compare' => '=',
-				)
+				'compare_key' => 'EXISTS',
 			)
 		);
 
@@ -80,12 +43,12 @@ class BeyondWpdbTest extends WP_UnitTestCase {
 			array(
 				'key'     => 'key1',
 				'value'   => 'value1',
-				'compare' => '=',
+				'compare_key' => '=',
 			),
 			array(
 				'key'     => 'key2',
 				'value'   => 'value2',
-				'compare' => 'IN',
+				'compare_key' => 'IN',
 			)
 		);
 
@@ -98,6 +61,43 @@ class BeyondWpdbTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * queries再帰的チェック - 成功
+	 */
+	public function test_check_recursive_success() {
+		$queries = array(
+			array(
+				'key'     => 'key1',
+				'value'   => 'value1',
+				'compare_key' => '=',
+			),
+			array(
+				'key'     => 'key2',
+				'value'   => 'value2',
+				'compare_key' => 'EXISTS',
+			),
+			array(
+				array(
+					'key'     => 'key3',
+					'value'   => 'value3',
+					'compare_key' => '=',
+				),
+				array(
+					'key'     => 'key4',
+					'value'   => 'value4',
+					'compare_key' => 'EXISTS',
+				)
+			)
+		);
+
+		// protectedなのでアクセス許可
+		$metaQuery = new Beyond_Wpdb_Meta_Query();
+		$reflection = new ReflectionClass($metaQuery);
+		$method = $reflection->getMethod('check');
+		$method->setAccessible(true);
+		$this->assertTrue( $method->invoke($metaQuery, $queries) );
+	}
+
+	/**
 	 * queries再帰的チェック - 失敗
 	 */
 	public function test_check_recursive_failure() {
@@ -105,23 +105,23 @@ class BeyondWpdbTest extends WP_UnitTestCase {
 			array(
 				'key'     => 'key1',
 				'value'   => 'value1',
-				'compare' => '=',
+				'compare_key' => '=',
 			),
 			array(
 				'key'     => 'key2',
 				'value'   => 'value2',
-				'compare' => '=',
+				'compare_key' => '=',
 			),
 			array(
 				array(
 					'key'     => 'key3',
 					'value'   => 'value3',
-					'compare' => '=',
+					'compare_key' => '=',
 				),
 				array(
 					'key'     => 'key4',
 					'value'   => 'value4',
-					'compare' => 'IN',
+					'compare_key' => 'IN',
 				)
 			)
 		);

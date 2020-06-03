@@ -65,7 +65,7 @@ class Beyond_Wpdb_Meta_Query {
 	protected function checkColumns($columns) {
 		return isset( $columns['key'] ) &&
 		       isset( $columns['value'] ) &&
-		       (isset( $columns['compare'] ) && ($columns['compare'] === '=' || $columns['compare'] === 'EXISTS'));
+		       (isset( $columns['compare_key'] ) && ($columns['compare_key'] === '=' || $columns['compare_key'] === 'EXISTS'));
 	}
 
 	// jsonの独自テーブルのテーブル名を返す
