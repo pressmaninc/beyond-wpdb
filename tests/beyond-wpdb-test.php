@@ -4,6 +4,8 @@
  *
  * @package Beyond_Wpdb
  */
+
+// プラグインの読み込み
 require_once( plugin_dir_path( __FILE__ ) . '../beyond-wpdb.php' );
 
 class BeyondWpdbTest extends WP_UnitTestCase {
@@ -11,7 +13,7 @@ class BeyondWpdbTest extends WP_UnitTestCase {
 	/**
 	 * queriesチェック - 成功
 	 */
-	public function check_success() {
+	public function test_check_success() {
 		$queries = array(
 			array(
 				'key'     => 'key1',
@@ -24,16 +26,19 @@ class BeyondWpdbTest extends WP_UnitTestCase {
 				'compare' => '=',
 			)
 		);
-		// mergeされてなくてBeyond_Wpdb_Meta_Queryが存在しないのでコメントアウト
-		// $metaQuery = new Beyond_Wpdb_Meta_Query();
-		// protectedなのでどうするか考え中
-		// $this->assertTrue( $metaQuery->check($queries) );
+
+		// protectedなのでアクセス許可
+		$metaQuery = new Beyond_Wpdb_Meta_Query();
+		$reflection = new ReflectionClass($metaQuery);
+		$method = $reflection->getMethod('check');
+		$method->setAccessible(true);
+		$this->assertTrue( $method->invoke($metaQuery, $queries) );
 	}
 
 	/**
 	 * queries再帰的チェック - 成功
 	 */
-	public function check_recursive_success() {
+	public function test_check_recursive_success() {
 		$queries = array(
 			array(
 				'key'     => 'key1',
@@ -58,16 +63,19 @@ class BeyondWpdbTest extends WP_UnitTestCase {
 				)
 			)
 		);
-		// mergeされてなくてBeyond_Wpdb_Meta_Queryが存在しないのでコメントアウト
-		// $metaQuery = new Beyond_Wpdb_Meta_Query();
-		// protectedなのでどうするか考え中
-		// $this->assertTrue( $metaQuery->check($queries) );
+
+		// protectedなのでアクセス許可
+		$metaQuery = new Beyond_Wpdb_Meta_Query();
+		$reflection = new ReflectionClass($metaQuery);
+		$method = $reflection->getMethod('check');
+		$method->setAccessible(true);
+		$this->assertTrue( $method->invoke($metaQuery, $queries) );
 	}
 
 	/**
 	 * queriesチェック - 失敗
 	 */
-	public function check_failure() {
+	public function test_check_failure() {
 		$queries = array(
 			array(
 				'key'     => 'key1',
@@ -80,16 +88,19 @@ class BeyondWpdbTest extends WP_UnitTestCase {
 				'compare' => 'IN',
 			)
 		);
-		// mergeされてなくてBeyond_Wpdb_Meta_Queryが存在しないのでコメントアウト
-		// $metaQuery = new Beyond_Wpdb_Meta_Query();
-		// protectedなのでどうするか考え中
-		// $this->assertFalse( $metaQuery->check($queries) );
+
+		// protectedなのでアクセス許可
+		$metaQuery = new Beyond_Wpdb_Meta_Query();
+		$reflection = new ReflectionClass($metaQuery);
+		$method = $reflection->getMethod('check');
+		$method->setAccessible(true);
+		$this->assertFalse( $method->invoke($metaQuery, $queries) );
 	}
 
 	/**
 	 * queries再帰的チェック - 失敗
 	 */
-	public function check_recursive_failure() {
+	public function test_check_recursive_failure() {
 		$queries = array(
 			array(
 				'key'     => 'key1',
@@ -110,13 +121,16 @@ class BeyondWpdbTest extends WP_UnitTestCase {
 				array(
 					'key'     => 'key4',
 					'value'   => 'value4',
-					'compare' => '=',
+					'compare' => 'IN',
 				)
 			)
 		);
-		// mergeされてなくてBeyond_Wpdb_Meta_Queryが存在しないのでコメントアウト
-		// $metaQuery = new Beyond_Wpdb_Meta_Query();
-		// protectedなのでどうするか考え中
-		// $this->assertFalse( $metaQuery->check($queries) );
+
+		// protectedなのでアクセス許可
+		$metaQuery = new Beyond_Wpdb_Meta_Query();
+		$reflection = new ReflectionClass($metaQuery);
+		$method = $reflection->getMethod('check');
+		$method->setAccessible(true);
+		$this->assertFalse( $method->invoke($metaQuery, $queries) );
 	}
 }
