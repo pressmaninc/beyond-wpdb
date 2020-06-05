@@ -25,17 +25,19 @@ class Beyond_Wpdb_Meta_Query {
 			return $sql;
 		}
 
-		$this->queries = $queries;
-
-		return $this->get_sql( $type, $primary_table, $primary_id_column, $context );
+		return $this->get_sql( $type, $queries, $primary_table, $primary_id_column, $context )
+			? $this->get_sql( $type, $queries, $primary_table, $primary_id_column, $context )
+			: $sql;
 	}
 
 	// WP_Meta_Query::get_sql参照
-	public function get_sql( $type, $primary_table, $primary_id_column, $context ) {
+	public function get_sql( $type, $queries, $primary_table, $primary_id_column, $context ) {
 		$meta_table = $this->_get_meta_table( $type );
 		if ( ! $meta_table ) {
 			return false;
 		};
+
+		$this->queries = $queries;
 
 		$this->table_aliases = array();
 
@@ -47,9 +49,6 @@ class Beyond_Wpdb_Meta_Query {
 
 		$sql = $this->get_sql_clauses();
 
-		echo '#####################################result####################################' . PHP_EOL;
-		print_r($sql);
-		echo '#####################################result####################################' . PHP_EOL;
 		return $sql;
 	}
 
@@ -237,16 +236,7 @@ class Beyond_Wpdb_Meta_Query {
 			if ( 'NOT EXISTS' === $meta_compare ) {
 				$sql_chunks['where'][] = $alias . '.' . $this->meta_id_column . ' IS NULL';
 			} else {
-
-				// compare_keyは=かEXISTSのどちらか
-				switch ( $meta_compare_key ) {
-					case '=':
-					case 'EXISTS':
-						$where = $wpdb->prepare( "JSON_EXTRACT(json, %s) != ''", '$.' . trim( $clause['key'] ) );
-						break;
-				}
-
-				$sql_chunks['where'][] = $where;
+				$sql_chunks['where'][] = $wpdb->prepare( "JSON_EXTRACT(json, %s) != ''", '$.' . trim( $clause['key'] ) );
 			}
 		}
 
@@ -267,26 +257,45 @@ class Beyond_Wpdb_Meta_Query {
 			switch ( $meta_compare ) {
 				case 'IN':
 				case 'NOT IN':
-					$in = '[' . implode(",", $meta_value) . ']';
-					$where = $wpdb->prepare( "JSON_CONTAINS(json, '$in', '%s')", $key );
+					$in = '';
+					foreach ($meta_value as $k => $value) {
+						if ($k === 0) {
+							$in .= '(';
+						}
+
+						if ($k === count($meta_value) - 1) {
+							$in .= "'$value')";
+							break;
+						}
+
+						$in .= "'$value',";
+					}
+
+					$meta = $wpdb->prepare( "JSON_EXTRACT(json, %s)", $key );
+					$where = $meta . ' ' . $meta_compare . ' ' . $in;
 					break;
 
 				case 'BETWEEN':
 				case 'NOT BETWEEN':
-					$where = $wpdb->prepare( '%s AND %s', $meta_value[0], $meta_value[1] );
+					$meta = $wpdb->prepare( "JSON_EXTRACT(json, %s)", $key );
+					$metaValue1 = $wpdb->prepare( '%s', $meta_value[0] );
+					$metaValue2 = $wpdb->prepare( '%s', $meta_value[1] );
+					$where = $meta_compare === 'BETWEEN'
+						? "$metaValue1 <= $meta and $meta <= $metaValue2"
+						: "$metaValue1 > $meta and $meta > $metaValue2";
 					break;
 
 				case 'LIKE':
 				case 'NOT LIKE':
 					$meta_value = '%' . $wpdb->esc_like( $meta_value ) . '%';
-					$meta = $wpdb->prepare( "JSON_EXTRACT(json, %s)",'$.' . trim( $clause['key'] ) );
+					$meta = $wpdb->prepare( "JSON_EXTRACT(json, %s)", $key );
 					$where = $meta . ' ' . $meta_compare . ' ' .$wpdb->prepare('%s' , $meta_value);
 					break;
 
 				// EXISTS with a value is interpreted as '='.
 				case 'EXISTS':
 					$meta_compare = '=';
-					$meta = $wpdb->prepare( "JSON_EXTRACT(json, %s)",'$.' . trim( $clause['key'] ) );
+					$meta = $wpdb->prepare( "JSON_EXTRACT(json, %s)", $key );
 					$where = $meta . ' ' . $meta_compare . ' ' .$wpdb->prepare('%s' , $meta_value);
 					break;
 
@@ -296,7 +305,7 @@ class Beyond_Wpdb_Meta_Query {
 					break;
 
 				default:
-					$meta = $wpdb->prepare( "JSON_EXTRACT(json, %s)",'$.' . trim( $clause['key'] ) );
+					$meta = $wpdb->prepare( "JSON_EXTRACT(json, %s)", $key );
 					$where = $meta . ' ' . $meta_compare . ' ' .$wpdb->prepare('%s' , $meta_value);
 					break;
 
