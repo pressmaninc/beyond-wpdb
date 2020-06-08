@@ -1,3 +1,7 @@
+/*
+Reference　Version: 4.4.0
+*/
+
 <?php
 class Beyond_Wpdb_Meta_Query {
 	public $queries = array();
@@ -81,12 +85,12 @@ class Beyond_Wpdb_Meta_Query {
 			$indent .= '  ';
 		}
 
-		foreach ($query as $key => &$clause) {
-			if ('relation' === $key) {
+		foreach ( $query as $key => &$clause ) {
+			if ( 'relation' === $key ) {
 				$relation = $query['relation'];
-			} elseif (is_array($clause)) {
+			} elseif ( is_array($clause) ) {
 				// 再帰的判定
-				if ($this->is_first_order_clause($clause)) {
+				if ( $this->is_first_order_clause( $clause ) ) {
 					$clause_sql = $this->get_sql_for_clause( $clause, $query, $key );
 
 					$where_count = count( $clause_sql['where'] );
@@ -230,16 +234,6 @@ class Beyond_Wpdb_Meta_Query {
 		// Store the clause in our flat array.
 		$this->clauses[ $clause_key ] =& $clause;
 
-		// compare_key
-		// チェック済みなのでkeyは存在するけど念の為チェック
-		if ( array_key_exists( 'key', $clause ) ) {
-			if ( 'NOT EXISTS' === $meta_compare ) {
-				$sql_chunks['where'][] = $alias . '.' . $this->meta_id_column . ' IS NULL';
-			} else {
-				$sql_chunks['where'][] = $wpdb->prepare( "JSON_EXTRACT(json, %s) != ''", '$.' . trim( $clause['key'] ) );
-			}
-		}
-
 		// meta_value.
 		// チェック済みなのでkeyは存在するけど念の為チェック
 		if ( array_key_exists( 'value', $clause ) ) {
@@ -257,46 +251,44 @@ class Beyond_Wpdb_Meta_Query {
 			switch ( $meta_compare ) {
 				case 'IN':
 				case 'NOT IN':
-					$in = '';
-					foreach ($meta_value as $k => $value) {
-						if ($k === 0) {
-							$in .= '(';
+				    $meta_compare = $meta_compare === 'IN'
+					    ? '='
+					    : '!=';
+					$column = $this->getColumn($meta_type, $key);
+					$where = '';
+					if (is_array($meta_value)) {
+						foreach ($meta_value as $k => $value) {
+							$where .= $k !== count($meta_value) - 1
+								? $column . ' ' . $meta_compare . ' ' . $wpdb->prepare('%s', $value) . ' OR '
+								: $column . ' ' . $meta_compare . ' ' . $wpdb->prepare('%s', $value) . ' ';
 						}
-
-						if ($k === count($meta_value) - 1) {
-							$in .= "'$value')";
-							break;
-						}
-
-						$in .= "'$value',";
+					} else {
+						$where = $column . ' ' . $meta_compare . ' ' . $wpdb->prepare('%s', $meta_value);
 					}
-
-					$meta = $wpdb->prepare( "JSON_EXTRACT(json, %s)", $key );
-					$where = $meta . ' ' . $meta_compare . ' ' . $in;
 					break;
 
 				case 'BETWEEN':
 				case 'NOT BETWEEN':
-					$meta = $wpdb->prepare( "JSON_EXTRACT(json, %s)", $key );
+					$column = $this->getColumn($meta_type, $key);
 					$metaValue1 = $wpdb->prepare( '%s', $meta_value[0] );
 					$metaValue2 = $wpdb->prepare( '%s', $meta_value[1] );
 					$where = $meta_compare === 'BETWEEN'
-						? "$metaValue1 <= $meta and $meta <= $metaValue2"
-						: "$metaValue1 > $meta and $meta > $metaValue2";
+						? "$metaValue1 <= $column and $column <= $metaValue2"
+						: "$metaValue1 > $column OR $column > $metaValue2";
 					break;
 
 				case 'LIKE':
 				case 'NOT LIKE':
 					$meta_value = '%' . $wpdb->esc_like( $meta_value ) . '%';
-					$meta = $wpdb->prepare( "JSON_EXTRACT(json, %s)", $key );
-					$where = $meta . ' ' . $meta_compare . ' ' .$wpdb->prepare('%s' , $meta_value);
+					$column = $this->getColumn($meta_type, $key);
+					$where = $column . ' ' . $meta_compare . ' ' .$wpdb->prepare('%s' , $meta_value);
 					break;
 
 				// EXISTS with a value is interpreted as '='.
 				case 'EXISTS':
 					$meta_compare = '=';
-					$meta = $wpdb->prepare( "JSON_EXTRACT(json, %s)", $key );
-					$where = $meta . ' ' . $meta_compare . ' ' .$wpdb->prepare('%s' , $meta_value);
+					$column = $this->getColumn($meta_type, $key);
+					$where = $column . ' ' . $meta_compare . ' ' .$wpdb->prepare('%s' , $meta_value);
 					break;
 
 				// 'value' is ignored for NOT EXISTS.
@@ -305,18 +297,20 @@ class Beyond_Wpdb_Meta_Query {
 					break;
 
 				default:
-					$meta = $wpdb->prepare( "JSON_EXTRACT(json, %s)", $key );
-					$where = $meta . ' ' . $meta_compare . ' ' .$wpdb->prepare('%s' , $meta_value);
+					$column = $this->getColumn($meta_type, $key);
+					$where = $column . ' ' . $meta_compare . ' ' .$wpdb->prepare('%s' , $meta_value);
 					break;
 
 			}
 
 			if ( $where ) {
-				if ( 'CHAR' === $meta_type ) {
+				$sql_chunks['where'][] = "{$where}";
+				/* if ( 'CHAR' === $meta_type ) {
 					$sql_chunks['where'][] = "{$where}";
+					// $sql_chunks['where'][] = "$alias.meta_value {$meta_compare} {$where}";
 				} else {
 					$sql_chunks['where'][] = "CAST($alias.meta_value AS {$meta_type}) {$meta_compare} {$where}";
-				}
+				} */
 			}
 		}
 
@@ -328,6 +322,7 @@ class Beyond_Wpdb_Meta_Query {
 		return $sql_chunks;
 	}
 
+
 	// 変換して大丈夫かどうか判断
 	protected function check( $query ) {
 		// is_first_order_clauseを活用して再帰的に判断する必要あり
@@ -336,14 +331,14 @@ class Beyond_Wpdb_Meta_Query {
 			return false;
 		}
 
-		foreach ($query as $key => $clause) {
-			if (is_array($clause)) {
-				if ($this->is_first_order_clause( $clause )) {
-					if (!$this->checkColumns($clause)) {
+		foreach ( $query as $key => $clause ) {
+			if ( is_array( $clause ) ) {
+				if ( $this->is_first_order_clause( $clause ) ) {
+					if ( !$this->checkColumns( $clause ) ) {
 						return false;
 					}
 				} else {
-					if ($this->check($clause)) {
+					if ( $this->check( $clause ) ) {
 						continue;
 					} else {
 						return false;
@@ -355,24 +350,17 @@ class Beyond_Wpdb_Meta_Query {
 		return true;
 	}
 
-	//　変換条件チェック
-	protected function checkColumns($columns) {
-		return isset( $columns['key'] ) &&
-		       isset( $columns['value'] ) &&
-		       (isset( $columns['compare_key'] ) && ($columns['compare_key'] === '=' || $columns['compare_key'] === 'EXISTS'));
-	}
-
 	// jsonの独自テーブルのテーブル名を返す
 	protected function _get_meta_table( $type ) {
 		global $wpdb;
 
-		if (!in_array($type, ['post', 'user', 'comment'])) {
+		if (!in_array( $type, ['post', 'user', 'comment'] ) ) {
 			return false;
 		}
 
-		$table_name = $type . 'meta_json';
+		$table_name = esc_sql( constant( beyond_wpdb_get_define_table_name( $type ) ) );
 
-		$json_table_name = $wpdb->get_var("show tables like '" . $wpdb->prefix . $table_name . "'");
+		$json_table_name = $wpdb->get_var( "show tables like '" . $table_name . "'" );
 
 		if ( empty( $json_table_name ) ) {
 			return false;
@@ -398,6 +386,20 @@ class Beyond_Wpdb_Meta_Query {
 		}
 
 		return $meta_type;
+	}
+
+	//　変換条件チェック
+	protected function checkColumns( $columns ) {
+		return isset( $columns['key'] ) &&
+		       isset( $columns['value'] ) &&
+		       ( isset( $columns['compare_key'] ) && ( $columns['compare_key'] === '=' || $columns['compare_key'] === 'EXISTS' ) );
+	}
+
+	protected function getColumn( $meta_type, $key ) {
+		global $wpdb;
+		return 'CHAR' === $meta_type
+			? $wpdb->prepare( "JSON_EXTRACT(json, %s)", $key )
+			: $wpdb->prepare( "CAST(JSON_EXTRACT(json, %s) as $meta_type)", $key );
 	}
 }
 
