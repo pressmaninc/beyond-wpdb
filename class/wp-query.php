@@ -46,6 +46,7 @@ class Beyond_Wpdb_Wp_Query {
 	protected function check( $query ) {
 		$query_vars = $query->query_vars;
 
+		// meta_queryが指定されている場合、postmeta_jsonテーブルとinner joinされていると判定しています。
 		return array_key_exists( 'meta_query', $query_vars ) &&
 		       count( $query_vars['meta_query'] ) > 0 &&
 		       array_key_exists( 'orderby', $query_vars ) &&
@@ -63,6 +64,7 @@ class Beyond_Wpdb_Wp_Query {
 			'post_modified',
 			'post_parent',
 			'post_type',
+			'meta_value',
 			'name',
 			'author',
 			'date',

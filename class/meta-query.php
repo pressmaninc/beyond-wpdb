@@ -260,9 +260,15 @@ class Beyond_Wpdb_Meta_Query {
 					$where = '';
 					if ( is_array( $meta_value ) ) {
 						foreach ( $meta_value as $k => $value ) {
-							$where .= $k !== count( $meta_value ) - 1
-								? $column . ' ' . $meta_compare . ' ' . $wpdb->prepare( '%s', $value ) . ' OR '
-								: $column . ' ' . $meta_compare . ' ' . $wpdb->prepare( '%s', $value ) . ' ';
+
+							if ( $k === 0 ) {
+								$where .= ' ( ' . $column . ' ' . $meta_compare . ' ' . $wpdb->prepare( '%s', $value ) . ' OR ';
+							} elseif ( $k !== count($meta_value) - 1 ) {
+								$where .= $column . ' ' . $meta_compare . ' ' . $wpdb->prepare( '%s', $value ) . ' OR ';
+							} else {
+								$where .= $column . ' ' . $meta_compare . ' ' . $wpdb->prepare( '%s', $value ) . ' ) ';
+							}
+
 						}
 					} else {
 						$where = $column . ' ' . $meta_compare . ' ' . $wpdb->prepare( '%s', $meta_value );
@@ -276,8 +282,8 @@ class Beyond_Wpdb_Meta_Query {
 					$metaValue1 = $wpdb->prepare( '%s', $meta_value[0] );
 					$metaValue2 = $wpdb->prepare( '%s', $meta_value[1] );
 					$where = $meta_compare === 'BETWEEN'
-						? "$metaValue1 <= $column and $column <= $metaValue2"
-						: "$metaValue1 > $column OR $column > $metaValue2";
+						? "( $metaValue1 <= $column and $column <= $metaValue2 )"
+						: "( $metaValue1 > $column OR $column > $metaValue2 )";
 					break;
 
 				case 'LIKE':

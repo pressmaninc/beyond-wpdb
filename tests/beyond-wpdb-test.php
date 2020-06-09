@@ -286,8 +286,8 @@ class BeyondWpdbTest extends WP_UnitTestCase {
 
 		// sql[where]チェック
 		$expected_where = $this->remove_spaces(
-			"AND ( JSON_EXTRACT(json, '$.regions') = 'tokyo' OR JSON_EXTRACT(json, '$.regions') = 'osaka' OR JSON_EXTRACT(json, '$.regions') = 'kyoto'
-					AND JSON_EXTRACT(json, '$.languages') != 'japanese' OR JSON_EXTRACT(json, '$.languages') != 'english' OR JSON_EXTRACT(json, '$.languages') != 'chinese' )"
+			"AND ( ( JSON_EXTRACT(json, '$.regions') = 'tokyo' OR JSON_EXTRACT(json, '$.regions') = 'osaka' OR JSON_EXTRACT(json, '$.regions') = 'kyoto' )
+					AND ( JSON_EXTRACT(json, '$.languages') != 'japanese' OR JSON_EXTRACT(json, '$.languages') != 'english' OR JSON_EXTRACT(json, '$.languages') != 'chinese' ) )"
 		);
 		// get_sqlの引数
 		$type = 'post';
@@ -332,8 +332,8 @@ class BeyondWpdbTest extends WP_UnitTestCase {
 
 		// sql[where]チェック
 		$expected_where = $this->remove_spaces(
-			"AND ( '2020-05-01' <= JSON_EXTRACT(json, '$.date1') and JSON_EXTRACT(json, '$.date1') <= '2020-06-01' 
-					AND '2020-05-01' > JSON_EXTRACT(json, '$.date2') OR JSON_EXTRACT(json, '$.date2') > '2020-06-01' )"
+			"AND ( ( '2020-05-01' <= JSON_EXTRACT(json, '$.date1') and JSON_EXTRACT(json, '$.date1') <= '2020-06-01' ) 
+					AND ( '2020-05-01' > JSON_EXTRACT(json, '$.date2') OR JSON_EXTRACT(json, '$.date2') > '2020-06-01' ) )"
 		);
 		// get_sqlの引数
 		$type = 'post';
@@ -377,7 +377,7 @@ class BeyondWpdbTest extends WP_UnitTestCase {
 		// sql[where]チェック
 		$expected_where = $this->remove_spaces(
 			"AND ( JSON_EXTRACT(json, '$.region') = 'tokyo' 
-					AND JSON_EXTRACT(json, '$.hobbies') = 'walking' OR JSON_EXTRACT(json, '$.hobbies') = 'fishing' 
+					AND ( JSON_EXTRACT(json, '$.hobbies') = 'walking' OR JSON_EXTRACT(json, '$.hobbies') = 'fishing' ) 
 					AND ( JSON_EXTRACT(json, '$.language') = 'japanese' OR JSON_EXTRACT(json, '$.language') = 'english' ) )"
 		);
 		// get_sqlの引数
@@ -727,12 +727,14 @@ class BeyondWpdbTest extends WP_UnitTestCase {
 		}
 
 		// heightは昇順、weightは降順
+		// meta_keyを指定するとmeta_keyを指定するとpostmeta_jsonとinnerされず、postmetaがとinner joinされてしまうので、
+		// orderbyを修正する前にmeta_keyが指定された時meta_keyを指定するとpostmeta_jsonとinnerされるように修正が必要ですか？
 		$args = array(
 			'orderby' => array(
-				'height' => 'ASC',
-				'weight' => 'DESC'
+				'post_name' => 'ASC',
+				'meta_value' => 'DESC'
 			),
-			'order'   => 'ASC',
+			'meta_key' => 'region',
 			'meta_query' => array(
 				array(
 					'key'     => 'region',
@@ -765,6 +767,7 @@ class BeyondWpdbTest extends WP_UnitTestCase {
 			$_expected_array[ $k ] = $val;
 		}
 
+		print_r($the_query->request);
 		$this->assertEquals( $_expected_array, $result_array );
 	}
 
