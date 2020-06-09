@@ -16,16 +16,15 @@ class BeyondWpdbTest extends WP_UnitTestCase {
 		parent::setUp();
 
 		$this->metaQuery = new Beyond_Wpdb_Meta_Query();
-
 		$register_hook = new Beyond_Wpdb_Register_Hook();
 		$register_hook::activation();
 	}
 
 	public function tearDown()
 	{
-		global $wpdb;
 		parent::tearDown();
 
+		global $wpdb;
 		$wpdb->get_results( "delete from wptests_postmeta_json" );
 		$register_hook = new Beyond_Wpdb_Register_Hook();
 		$register_hook::deactivation();
@@ -420,9 +419,9 @@ class BeyondWpdbTest extends WP_UnitTestCase {
 		$context = null;
 		// get_sql実行
 		$method = $this->get_access_protected('get_sql');
-		$sql = $method->invoke($this->metaQuery, $type, $queries, $primary_table, $primary_id_column, $context);
-		$where = $this->remove_spaces($sql['where']);
-		$this->assertEquals($expected_where,  $where);
+		$sql = $method->invoke( $this->metaQuery, $type, $queries, $primary_table, $primary_id_column, $context );
+		$where = $this->remove_spaces( $sql['where'] );
+		$this->assertEquals( $expected_where,  $where );
 	}
 
 	/**
@@ -432,8 +431,8 @@ class BeyondWpdbTest extends WP_UnitTestCase {
 	{
 		// postテーブルに投稿
 		$post_id = $this->factory->post->create();
-		add_post_meta($post_id, 'region', 'tokyo', false);
-		add_post_meta($post_id, 'language', 'japanese', false);
+		add_post_meta( $post_id, 'region', 'tokyo', false );
+		add_post_meta( $post_id, 'language', 'japanese', false );
 
 		$args = array(
 			'meta_query' => array(
@@ -451,8 +450,8 @@ class BeyondWpdbTest extends WP_UnitTestCase {
 				)
 			)
 		);
-		$the_query = new WP_Query($args);
-		$this->assertCount(1, $the_query->get_posts());
+		$the_query = new WP_Query( $args );
+		$this->assertCount( 1, $the_query->get_posts() );
 	}
 
 	/**
@@ -462,8 +461,8 @@ class BeyondWpdbTest extends WP_UnitTestCase {
 	{
 		// postテーブルに投稿
 		$post_id = $this->factory->post->create();
-		add_post_meta($post_id, 'region', 'tokyo', false);
-		add_post_meta($post_id, 'language', 'japanese', false);
+		add_post_meta( $post_id, 'region', 'tokyo', false );
+		add_post_meta( $post_id, 'language', 'japanese', false );
 
 		$args = array(
 			'meta_query' => array(
@@ -481,9 +480,9 @@ class BeyondWpdbTest extends WP_UnitTestCase {
 				)
 			)
 		);
-		$the_query = new WP_Query($args);
+		$the_query = new WP_Query( $args );
 		$the_query->get_posts();
-		$this->assertCount(1, $the_query->get_posts());
+		$this->assertCount( 1, $the_query->get_posts() );
 	}
 
 	/**
@@ -493,8 +492,8 @@ class BeyondWpdbTest extends WP_UnitTestCase {
 	{
 		// postテーブルに投稿
 		$post_id = $this->factory->post->create();
-		add_post_meta($post_id, 'hobby', 'waking', false);
-		add_post_meta($post_id, 'language', 'japanese', false);
+		add_post_meta( $post_id, 'hobby', 'waking', false );
+		add_post_meta( $post_id, 'language', 'japanese', false );
 
 		$args = array(
 			'meta_query' => array(
@@ -518,9 +517,9 @@ class BeyondWpdbTest extends WP_UnitTestCase {
 				)
 			)
 		);
-		$the_query = new WP_Query($args);
+		$the_query = new WP_Query( $args );
 		$the_query->get_posts();
-		$this->assertCount(1, $the_query->get_posts());
+		$this->assertCount( 1, $the_query->get_posts() );
 
 	}
 
@@ -532,8 +531,8 @@ class BeyondWpdbTest extends WP_UnitTestCase {
 
 		// postテーブルに投稿
 		$post_id = $this->factory->post->create();
-		add_post_meta($post_id, 'date1', '2020-06-05', false);
-		add_post_meta($post_id, 'date2', '2080-06-05', false);
+		add_post_meta( $post_id, 'date1', '2020-06-05', false );
+		add_post_meta( $post_id, 'date2', '2080-06-05', false );
 
 		$args = array(
 			'meta_query' => array(
@@ -557,9 +556,9 @@ class BeyondWpdbTest extends WP_UnitTestCase {
 				)
 			)
 		);
-		$the_query = new WP_Query($args);
+		$the_query = new WP_Query( $args );
 		$the_query->get_posts();
-		$this->assertCount(1, $the_query->get_posts());
+		$this->assertCount( 1, $the_query->get_posts() );
 
 	}
 
@@ -570,10 +569,10 @@ class BeyondWpdbTest extends WP_UnitTestCase {
 	{
 		// postテーブルに投稿
 		$post_id = $this->factory->post->create();
-		add_post_meta($post_id, 'region', 'tokyo', false);
-		add_post_meta($post_id, 'language', 'japanese', false);
-		add_post_meta($post_id, 'hobby', 'walking', false);
-		add_post_meta($post_id, 'means', 'train', false);
+		add_post_meta( $post_id, 'region', 'tokyo', false );
+		add_post_meta( $post_id, 'language', 'japanese', false );
+		add_post_meta( $post_id, 'hobby', 'walking', false );
+		add_post_meta( $post_id, 'means', 'train', false );
 
 		$args = array(
 			'meta_query' => array(
@@ -615,8 +614,8 @@ class BeyondWpdbTest extends WP_UnitTestCase {
 				)
 			)
 		);
-		$the_query = new WP_Query($args);
-		$this->assertCount(1, $the_query->get_posts());
+		$the_query = new WP_Query( $args );
+		$this->assertCount( 1, $the_query->get_posts() );
 
 	}
 
@@ -627,8 +626,8 @@ class BeyondWpdbTest extends WP_UnitTestCase {
 	{
 		// userを作成
 		$user_id = $this->factory->user->create();
-		add_user_meta($user_id, 'language', 'japanese');
-		add_user_meta($user_id, 'hobby', 'walking');
+		add_user_meta( $user_id, 'language', 'japanese' );
+		add_user_meta( $user_id, 'hobby', 'walking' );
 
 		$args = array(
 			'meta_query' => array(
@@ -647,22 +646,140 @@ class BeyondWpdbTest extends WP_UnitTestCase {
 			)
 		);
 
-		$the_query = new WP_User_Query($args);
-		$this->assertCount(1, $the_query->get_results());
+		$the_query = new WP_User_Query( $args );
+		$this->assertCount( 1, $the_query->get_results() );
 	}
 
-	protected function get_access_protected($method)
+	/**
+	 * get_meta_sqlチェック - orderby - notArray
+	 */
+	public function test_getMetaSql_orderBy_notArray()
+	{
+		$expected_array = array();
+		$result_array = array();
+
+		// 複数投稿
+		$post_ids = $this->factory->post->create_many( 10 );
+		foreach ( $post_ids as $post_id ) {
+			$rand = rand( 45, 75 );
+			array_push($expected_array, $rand );
+			add_post_meta( $post_id, 'region' , 'tokyo' );
+			add_post_meta( $post_id, 'deviation' , $rand );
+		}
+
+		$args = array(
+			'orderby' => 'deviation',
+			'order'   => 'ASC',
+			'meta_query' => array(
+				array(
+					'key'     => 'region',
+					'value'   => 'tokyo',
+					'compare' => '=',
+					'compare_key' => '='
+				)
+			)
+		);
+
+		$the_query = new WP_Query( $args );
+		if( $the_query->have_posts() ) {
+			while ( $the_query->have_posts() ) {
+				$the_query->the_post();
+				array_push( $result_array, get_post_meta( get_the_ID(), 'deviation' )[0]);
+			}
+		}
+
+		// 昇順にソート
+		sort( $expected_array );
+
+		$this->assertEquals( $expected_array, $result_array );
+	}
+
+	/**
+	 * get_meta_sqlチェック - orderby - array
+	 * 昇順、降順テストも同時に
+	 */
+	public function test_getMetaSql_orderBy_array()
+	{
+		$expected_array = array();
+		$result_array = array();
+
+		$height = 170;
+		$weight = 65;
+
+		// 複数投稿
+		$post_ids = $this->factory->post->create_many( 10 );
+		foreach ( $post_ids as $k => $post_id ) {
+
+			if ( $k % 3 === 0 ) {
+				$height += 5;
+			}
+			$weight++;
+
+			if ( !array_key_exists( $height, $expected_array ) ) {
+				$expected_array[$height] = array();
+			}
+
+			array_push( $expected_array[$height], $weight );
+
+			add_post_meta(  $post_id, 'region' , 'tokyo' );
+			add_post_meta(  $post_id, 'height' , $height );
+			add_post_meta(  $post_id, 'weight', $weight) ;
+		}
+
+		// heightは昇順、weightは降順
+		$args = array(
+			'orderby' => array(
+				'height' => 'ASC',
+				'weight' => 'DESC'
+			),
+			'order'   => 'ASC',
+			'meta_query' => array(
+				array(
+					'key'     => 'region',
+					'value'   => 'tokyo',
+					'compare' => '=',
+					'compare_key' => '='
+				)
+			)
+		);
+
+		$the_query = new WP_Query( $args );
+		if( $the_query->have_posts() ) {
+			while ( $the_query->have_posts() ) {
+				$the_query->the_post();
+
+				$height = get_post_meta( get_the_ID(), 'height' )[0];
+				$weight = get_post_meta( get_the_ID(), 'weight' )[0];
+
+				if ( !array_key_exists( $height, $result_array ) ) {
+					$result_array[ $height ] = array();
+				}
+
+				array_push( $result_array[$height], $weight );
+			}
+		}
+
+		$_expected_array = array();
+		foreach ( $expected_array as $k => $val ) {
+			rsort( $val );
+			$_expected_array[ $k ] = $val;
+		}
+
+		$this->assertEquals( $_expected_array, $result_array );
+	}
+
+	protected function get_access_protected( $method )
 	{
 		// protectedなのでアクセス許可
-		$reflection = new ReflectionClass($this->metaQuery);
-		$method = $reflection->getMethod($method);
-		$method->setAccessible(true);
+		$reflection = new ReflectionClass( $this->metaQuery );
+		$method = $reflection->getMethod( $method );
+		$method->setAccessible( true );
 		return $method;
 	}
 
 	//左右の空白を取り除いて、改行とタブをスペースに変換、複数スペースを１つのスペースに変換
-	protected function remove_spaces($where)
+	protected function remove_spaces( $where )
 	{
-		return preg_replace('/\s(?=\s)/', '', preg_replace('/[\n\r\t]/', ' ', trim($where)));
+		return preg_replace( '/\s(?=\s)/', '', preg_replace( '/[\n\r\t]/', ' ', trim( $where ) ) );
 	}
 }
