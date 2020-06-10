@@ -1,6 +1,6 @@
 <?php
 /**
- * Class BeyondWpdbTest
+ * Class Beyond_Wpdb_Test
  *
  * @package Beyond_Wpdb
  */
@@ -8,7 +8,7 @@
 // プラグインの読み込み
 require_once( plugin_dir_path( __FILE__ ) . '../beyond-wpdb.php' );
 
-class BeyondWpdbTest extends WP_UnitTestCase {
+class Beyond_Wpdb_Test extends WP_UnitTestCase {
 	protected $metaQuery = '';
 
 	public function setUp()
@@ -35,14 +35,17 @@ class BeyondWpdbTest extends WP_UnitTestCase {
 	 */
 	public function test_check_success() {
 		$queries = array(
-			array(
-				'key'     => 'key1',
-				'value'   => 'value1',
-				'compare_key' => '=',
-			),
+			'meta_key' => 'key1',
+			'meta_value' => 'value1',
+			'meta_compare_key' => '=',
 			array(
 				'key'     => 'key2',
 				'value'   => 'value2',
+				'compare_key' => '=',
+			),
+			array(
+				'key'     => 'key3',
+				'value'   => 'value3',
 				'compare_key' => 'EXISTS',
 			)
 		);
@@ -65,7 +68,10 @@ class BeyondWpdbTest extends WP_UnitTestCase {
 				'key'     => 'key2',
 				'value'   => 'value2',
 				'compare_key' => 'IN',
-			)
+			),
+			'meta_key' => 'key3',
+			'meta_value' => 'value3',
+			'meta_compare_key' => 'LIKE',
 		);
 
 		$method = $this->get_access_protected( 'check' );
@@ -435,6 +441,9 @@ class BeyondWpdbTest extends WP_UnitTestCase {
 		add_post_meta( $post_id, 'language', 'japanese', false );
 
 		$args = array(
+			'meta_compare_key' => '=',
+			'meta_key' => 'region',
+			'meta_value' => 'tokyo',
 			'meta_query' => array(
 				array(
 					'key'     => 'region',
@@ -727,22 +736,24 @@ class BeyondWpdbTest extends WP_UnitTestCase {
 		}
 
 		// heightは昇順、weightは降順
-		// meta_keyを指定するとmeta_keyを指定するとpostmeta_jsonとinnerされず、postmetaがとinner joinされてしまうので、
-		// orderbyを修正する前にmeta_keyが指定された時meta_keyを指定するとpostmeta_jsonとinnerされるように修正が必要ですか？
 		$args = array(
+			/*'orderby' => array(
+				'height' => 'ASC',
+				'weight' => 'DESC'
+			),*/
 			'orderby' => array(
-				'post_name' => 'ASC',
-				'meta_value' => 'DESC'
+				'height' => 'ASC',
+				'meta_value' => 'ASC'
 			),
 			'meta_key' => 'region',
-			'meta_query' => array(
+			'meta_value' => 'tokyo',
+			/*'meta_query' => array(
 				array(
 					'key'     => 'region',
 					'value'   => 'tokyo',
-					'compare' => '=',
-					'compare_key' => '='
+					'compare' => '='
 				)
-			)
+			)*/
 		);
 
 		$the_query = new WP_Query( $args );

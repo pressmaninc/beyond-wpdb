@@ -5,58 +5,34 @@
  */
 
 class Beyond_Wpdb_Wp_Query {
-	protected $meta_query = false;
-
-	public function parse_orderby( $orderby, $query ) {
-
-		if ( ! $this->check( $query ) ) {
-			return $orderby;
-		}
-
-		$query_vars = $query->query_vars;
-		$orderby    = '';
-		$_orderby   = $query_vars['orderby'];
-
-		// orderbyが配列の場合連結
-		if ( is_array( $_orderby ) ) {
-			// 連想配列の最後の値を取得
-			$offset       = count( $_orderby ) - 1;
-			$copy_orderby = $_orderby;
-			$last_ele     = rtrim( array_keys( array_slice( $copy_orderby, $offset, 1, true ) )[0] );
-
-			foreach ( $_orderby as $col => $order ) {
-				$order   = $order !== '' ? $order : 'DESC';
-				$col     = rtrim( $col );
-				$orderby .= $last_ele === $col
-					? "JSON_EXTRACT(json, '$.$col')" . ' ' . $order . ' '
-					: "JSON_EXTRACT(json, '$.$col')" . ' ' . $order . ', ';
-			}
-		} else {
-			$order    = $query_vars['order'] !== '' ? $query_vars['order'] : 'DESC';
-			$_orderby = rtrim( $_orderby );
-			$orderby  = "JSON_EXTRACT(json, '$.$_orderby')" . ' ' . $order . ' ';
-		}
-
-		return $orderby;
-	}
-
-	/*
-	 * 変換条件チェック
+	/**
+	 * Query vars, after parsing
 	 */
-	protected function check( $query ) {
-		$query_vars = $query->query_vars;
+	public $query_vars = array();
 
-		// meta_queryが指定されている場合、postmeta_jsonテーブルとinner joinされていると判定しています。
-		return array_key_exists( 'meta_query', $query_vars ) &&
-		       count( $query_vars['meta_query'] ) > 0 &&
-		       array_key_exists( 'orderby', $query_vars ) &&
-		       $query_vars['orderby'] !== '' &&
-		       ! $this->check_not_allowed_orderby( $query_vars['orderby'] );
+	/**
+	 * Parse an 'order' query variable and cast it to ASC or DESC as necessary.
+	 */
+	protected function parse_order( $order ) {
+		if ( ! is_string( $order ) || empty( $order ) ) {
+			return 'DESC';
+		}
+
+		if ( 'ASC' === strtoupper( $order ) ) {
+			return 'ASC';
+		} else {
+			return 'DESC';
+		}
 	}
 
-	protected function check_not_allowed_orderby( $orderby ) {
-		// $orderbyが以下配列に含まれている場合デフォルトの$orderbyを返す
-		$not_allowed_keys = array(
+	/**
+	 * Converts the given orderby alias (if allowed) to a properly-prefixed value.
+	 */
+	protected function parse_orderby( $orderby ) {
+		global $wpdb, $beyond_wpdb_meta_query;
+
+		// Used to filter values.
+		$allowed_keys = array(
 			'post_name',
 			'post_author',
 			'post_date',
@@ -64,7 +40,6 @@ class Beyond_Wpdb_Wp_Query {
 			'post_modified',
 			'post_parent',
 			'post_type',
-			'meta_value',
 			'name',
 			'author',
 			'date',
@@ -81,18 +56,161 @@ class Beyond_Wpdb_Wp_Query {
 			'post_name__in',
 		);
 
-		if ( is_array( $orderby ) ) {
-			//　配列指定の場合、一つでも含まれている場合デフォルトの$orderbyを返す
-			foreach ( $orderby as $col => $order ) {
-				if ( in_array( rtrim( $col ), $not_allowed_keys ) ) {
-					return true;
-				}
+		$allowed_keys[] = $orderby;
+
+		$primary_meta_key   = '';
+		$primary_meta_query = false;
+		$meta_clauses       = $beyond_wpdb_meta_query->get_clauses();
+
+		if ( ! empty( $meta_clauses ) ) {
+			$primary_meta_query = reset( $meta_clauses );
+
+			if ( ! empty( $primary_meta_query['key'] ) ) {
+				$primary_meta_key = $primary_meta_query['key'];
+				$allowed_keys[]   = $primary_meta_key;
 			}
-		} else {
-			return in_array( rtrim( $orderby ), $not_allowed_keys );
+
+			$allowed_keys[] = 'meta_value';
+			$allowed_keys[] = 'meta_value_num';
+			$allowed_keys   = array_merge( $allowed_keys, array_keys( $meta_clauses ) );
 		}
 
-		return false;
+		// If RAND() contains a seed value, sanitize and add to allowed keys.
+		$rand_with_seed = false;
+		if ( preg_match( '/RAND\(([0-9]+)\)/i', $orderby, $matches ) ) {
+			$orderby        = sprintf( 'RAND(%s)', intval( $matches[1] ) );
+			$allowed_keys[] = $orderby;
+			$rand_with_seed = true;
+		}
+
+		if ( ! in_array( $orderby, $allowed_keys, true ) ) {
+			return false;
+		}
+
+		$orderby_clause = '';
+
+		switch ( $orderby ) {
+			case 'post_name':
+			case 'post_author':
+			case 'post_date':
+			case 'post_title':
+			case 'post_modified':
+			case 'post_parent':
+			case 'post_type':
+			case 'ID':
+			case 'menu_order':
+			case 'comment_count':
+				$orderby_clause = "{$wpdb->posts}.{$orderby}";
+				break;
+			case 'rand':
+				$orderby_clause = 'RAND()';
+				break;
+			case $primary_meta_key:
+			case 'meta_value':
+				if ( ! empty( $primary_meta_query['type'] ) ) {
+					$orderby_clause = "CAST(JSON_EXTRACT(json, '$.$orderby') AS {$primary_meta_query['cast']})";
+				} else {
+					$orderby_clause = "JSON_EXTRACT(json, '$.{$primary_meta_query['key']}')";
+				}
+				break;
+			case 'meta_value_num':
+				$orderby_clause = "{$primary_meta_query['alias']}.meta_value+0";
+				break;
+			case 'post__in':
+				if ( ! empty( $this->query_vars['post__in'] ) ) {
+					$orderby_clause = "FIELD({$wpdb->posts}.ID," . implode( ',', array_map( 'absint', $this->query_vars['post__in'] ) ) . ')';
+				}
+				break;
+			case 'post_parent__in':
+				if ( ! empty( $this->query_vars['post_parent__in'] ) ) {
+					$orderby_clause = "FIELD( {$wpdb->posts}.post_parent," . implode( ', ', array_map( 'absint', $this->query_vars['post_parent__in'] ) ) . ' )';
+				}
+				break;
+			case 'post_name__in':
+				if ( ! empty( $this->query_vars['post_name__in'] ) ) {
+					$post_name__in        = array_map( 'sanitize_title_for_query', $this->query_vars['post_name__in'] );
+					$post_name__in_string = "'" . implode( "','", $post_name__in ) . "'";
+					$orderby_clause       = "FIELD( {$wpdb->posts}.post_name," . $post_name__in_string . ' )';
+				}
+				break;
+			default:
+				if ( array_key_exists( $orderby, $meta_clauses ) ) {
+					// $orderby corresponds to a meta_query clause.
+					$meta_clause    = $meta_clauses[ $orderby ];
+					$orderby_clause = "CAST({$meta_clause['alias']}.meta_value AS {$meta_clause['cast']})";
+				} elseif ( $rand_with_seed ) {
+					$orderby_clause = $orderby;
+				} else {
+					// Default: order by post field.
+					$orderby = sanitize_key( $orderby );
+					$orderby_clause = "JSON_EXTRACT(json, '$.$orderby')";
+				}
+
+				break;
+		}
+
+		return $orderby_clause;
+	}
+
+	public function _parse_orderby( $orderby, $query ) {
+
+		if ( ! $this->check( $query ) ) {
+			return $orderby;
+		}
+
+		$this->query_vars = $query->query_vars;
+		$q = $query->query;
+		$orderby_array = array();
+
+		if ( is_array( $q['orderby'] ) ) {
+			foreach ( $q['orderby'] as $_orderby => $order ) {
+				$orderby = addslashes_gpc( urldecode( $_orderby ) );
+				$parsed  = $this->parse_orderby( $orderby );
+
+				if ( ! $parsed ) {
+					continue;
+				}
+
+				$orderby_array[] = $parsed . ' ' . $this->parse_order( $order );
+			}
+			$orderby = implode( ', ', $orderby_array );
+
+		} else {
+			$q['orderby'] = urldecode( $q['orderby'] );
+			$q['orderby'] = addslashes_gpc( $q['orderby'] );
+
+			foreach ( explode( ' ', $q['orderby'] ) as $i => $orderby ) {
+				$parsed = $this->parse_orderby( $orderby );
+				// Only allow certain values for safety.
+				if ( ! $parsed ) {
+					continue;
+				}
+
+				$orderby_array[] = $parsed;
+			}
+			$orderby = implode( ' ' . $q['order'] . ', ', $orderby_array );
+
+			if ( empty( $orderby ) ) {
+				$orderby = "{$wpdb->posts}.post_date " . $q['order'];
+			} elseif ( ! empty( $q['order'] ) ) {
+				$orderby .= " {$q['order']}";
+			}
+		}
+
+		return $orderby;
+	}
+
+	/**
+	 * Check for conversion
+	 */
+	protected function check( $query ) {
+		global $beyond_wpdb_meta_query;
+
+		$query = $query->query;
+
+		//　Convert only if it is converted to a json table and an orderby clause is specified.
+		return count( $beyond_wpdb_meta_query->queries ) > 0 && ( isset( $query['orderby'] ) && $query['orderby'] !== '' );
+
 	}
 }
 
@@ -100,5 +218,5 @@ add_filter( 'posts_orderby_request', 'beyond_wpdb_wp_query_parse_orderby', 10, 2
 function beyond_wpdb_wp_query_parse_orderby( $orderby, $query ) {
 	$beyond_wpdb_wp_query = new Beyond_Wpdb_Wp_Query();
 
-	return $beyond_wpdb_wp_query->parse_orderby( $orderby, $query );
+	return $beyond_wpdb_wp_query->_parse_orderby( $orderby, $query );
 }

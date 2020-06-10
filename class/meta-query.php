@@ -20,12 +20,24 @@ class Beyond_Wpdb_Meta_Query {
 
 	public $clauses = array();
 
-	// WP_Meta_Query::is_first_order_clauseと同一で大丈夫かも
+	/**
+	 * Determine whether a query clause is first-order.
+	 *
+	 * A first-order meta query clause is one that has either a 'key' or
+	 * a 'value' array key.
+	 *
+	 * @since 4.1.0
+	 *
+	 * @param array $query Meta query arguments.
+	 * @return bool Whether the query clause is a first-order clause.
+	 */
 	protected function is_first_order_clause( $query ) {
 		return isset( $query['key'] ) || isset( $query['value'] );
 	}
 
-	// get_meta_sql hookで呼ばれる関数
+	/*
+	 *
+	 */
 	public function get_meta_sql( $sql, $queries, $type, $primary_table, $primary_id_column, $context ) {
 		if ( ! $this->check( $queries ) ) {
 			return $sql;
@@ -91,7 +103,7 @@ class Beyond_Wpdb_Meta_Query {
 			if ( 'relation' === $key ) {
 				$relation = $query['relation'];
 			} elseif ( is_array($clause) ) {
-				// 再帰的判定
+
 				if ( $this->is_first_order_clause( $clause ) ) {
 					$clause_sql = $this->get_sql_for_clause( $clause, $query, $key );
 
@@ -177,14 +189,7 @@ class Beyond_Wpdb_Meta_Query {
 			$clause['compare'] = '=';
 		}
 
-		$clause['compare_key'] = strtoupper( $clause['compare_key'] );
-
-		if ( ! in_array( $clause['compare_key'], $non_numeric_operators, true ) ) {
-			$clause['compare_key'] = '=';
-		}
-
-		$meta_compare     = $clause['compare'];
-		$meta_compare_key = $clause['compare_key'];
+		$meta_compare     = isset( $clause['compare'] ) ? $clause['compare'] : '=';
 
 		// First build the JOIN clause, if one is required.
 		$join = '';
@@ -328,8 +333,6 @@ class Beyond_Wpdb_Meta_Query {
 
 	// 変換して大丈夫かどうか判断
 	protected function check( $query ) {
-		// is_first_order_clauseを活用して再帰的に判断する必要あり
-		// 再帰的に確認する方法としてはWP_Meta_Query::get_sql_for_queryが参考になる
 		if ( !is_array( $query ) ) {
 			return false;
 		}
@@ -393,9 +396,15 @@ class Beyond_Wpdb_Meta_Query {
 
 	//　変換条件チェック
 	protected function checkColumns( $columns ) {
+		$correct_compare_key = true;
+
+		if ( isset( $columns['compare_key'] ) ) {
+			$correct_compare_key = $columns['compare_key'] === '=' || $columns['compare_key'] === 'EXISTS';
+		}
+
 		return isset( $columns['key'] ) &&
 		       isset( $columns['value'] ) &&
-		       ( isset( $columns['compare_key'] ) && ( $columns['compare_key'] === '=' || $columns['compare_key'] === 'EXISTS' ) );
+		       $correct_compare_key;
 	}
 
 	protected function getColumn( $meta_type, $key ) {
@@ -404,10 +413,25 @@ class Beyond_Wpdb_Meta_Query {
 			? $wpdb->prepare( "JSON_EXTRACT(json, %s)", $key )
 			: $wpdb->prepare( "CAST(JSON_EXTRACT(json, %s) as $meta_type)", $key );
 	}
+
+	/**
+	 * Get a flattened list of sanitized meta clauses.
+	 *
+	 * This array should be used for clause lookup, as when the table alias and CAST type must be determined for
+	 * a value of 'orderby' corresponding to a meta clause.
+	 *
+	 * @since 4.2.0
+	 *
+	 * @return array Meta clauses.
+	 */
+	public function get_clauses() {
+		return $this->clauses;
+	}
 }
 
 add_filter( 'get_meta_sql', 'beyond_wpdb_meta_query_get_sql', 10, 5 );
 function beyond_wpdb_meta_query_get_sql( $sql, $queries, $type, $primary_table, $primary_id_column, $context = null ) {
+	global $beyond_wpdb_meta_query;
 	$beyond_wpdb_meta_query = new Beyond_Wpdb_Meta_Query();
 	return $beyond_wpdb_meta_query->get_meta_sql( $sql, $queries, $type, $primary_table, $primary_id_column, $context );
 }
