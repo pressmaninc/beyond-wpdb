@@ -29,155 +29,69 @@ class Beyond_Wpdb_Query_OrderBy_Test extends WP_UnitTestCase {
 
 
 	/**
-	 * Wp_Query - orderby - notArray
+	 * Wp_Query - orderby
+	 * Check that the orderby clause is converted correctly
 	 */
-	public function test_getMetaSql_orderBy_notArray() {
-		$expected_array = array();
-		$result_array   = array();
+	public function test_check_orderby_clause() {
+		$expected_value = "ORDER BY JSON_EXTRACT(json, '$.region') DESC LIMIT 0, 10";
 
-		$post_ids = $this->factory->post->create_many( 10 );
-		foreach ( $post_ids as $post_id ) {
-			$rand = rand( 45, 75 );
-			array_push( $expected_array, $rand );
-			add_post_meta( $post_id, 'region', 'tokyo' );
-			add_post_meta( $post_id, 'deviation', $rand );
-		}
+		$post_id = $this->factory->post->create();
+		add_post_meta( $post_id, 'region', 'tokyo' );
 
 		$args = array(
-			'orderby'    => 'deviation',
-			'order' => 'ASC',
-			'meta_key' => 'region',
-			'meta_value' => 'tokyo',
-		);
-
-		$the_query = new WP_Query( $args );
-		if ( $the_query->have_posts() ) {
-			while ( $the_query->have_posts() ) {
-				$the_query->the_post();
-				array_push( $result_array, get_post_meta( get_the_ID(), 'deviation' )[0] );
-			}
-		}
-
-		sort( $expected_array );
-		$this->assertEquals( $expected_array, $result_array );
-	}
-
-	/**
-	 * Wp_Query - orderby - array
-	 */
-	public function test_getMetaSql_orderBy_array() {
-		$expected_array = array();
-		$result_array   = array();
-
-		$height = 170;
-		$weight = 65;
-
-		$post_ids = $this->factory->post->create_many( 10 );
-		foreach ( $post_ids as $k => $post_id ) {
-
-			if ( $k % 3 === 0 ) {
-				$height += 5;
-			}
-			$weight ++;
-
-			if ( ! array_key_exists( $height, $expected_array ) ) {
-				$expected_array[ $height ] = array();
-			}
-
-			array_push( $expected_array[ $height ], $weight );
-
-			add_post_meta( $post_id, 'region', 'tokyo' );
-			add_post_meta( $post_id, 'height', $height );
-			add_post_meta( $post_id, 'weight', $weight );
-		}
-
-		$args = array(
-			'orderby' => array(
-				'height' => 'ASC',
-				'weight' => 'DESC'
+			'orderby' => 'meta_value',
+			'meta_key'  => 'region',
+			'meta_value' => array(
+				'tokyo',
+				'osaka',
+				'kyoto'
 			),
-			'meta_key'   => 'region',
-			'meta_value' => 'tokyo',
+			'meta_compare' => 'IN'
 		);
 
 		$the_query = new WP_Query( $args );
-		if ( $the_query->have_posts() ) {
-			while ( $the_query->have_posts() ) {
-				$the_query->the_post();
 
-				$height = get_post_meta( get_the_ID(), 'height' )[0];
-				$weight = get_post_meta( get_the_ID(), 'weight' )[0];
-
-				if ( ! array_key_exists( $height, $result_array ) ) {
-					$result_array[ $height ] = array();
-				}
-
-				array_push( $result_array[ $height ], $weight );
-			}
-		}
-
-		$_expected_array = array();
-		foreach ( $expected_array as $k => $val ) {
-			rsort( $val );
-			$_expected_array[ $k ] = $val;
-		}
-
-		$this->assertEquals( $_expected_array, $result_array );
+		$pos = strpos($the_query->request, 'ORDER');
+		$this->assertEquals( $expected_value, substr($the_query->request, $pos) );
 	}
 
 	/**
-	 * Wp_Query - orderby - space delimitation
+	 * Wp_Query - orderby
+	 * Check that the orderby clause is converted correctly
 	 */
-	public function test_getMetaSql_space_delimitation() {
-		$expected_array = array();
-		$result_array   = array();
+	public function test_check_orderby_complex() {
+		$expected_value = "ORDER BY wptests_posts.post_name DESC, CAST(JSON_EXTRACT(json, '$.city') AS CHAR) ASC, JSON_EXTRACT(json, '$.state') DESC LIMIT 0, 10";
 
-		$height = 170;
-		$weight = 65;
-
-		// Multiple Posts
-		$post_ids = $this->factory->post->create_many( 10 );
-		foreach ( $post_ids as $k => $post_id ) {
-
-			if ( $k % 3 === 0 ) {
-				$height += 5;
-			}
-			$weight ++;
-
-			if ( ! array_key_exists( $height, $expected_array ) ) {
-				$expected_array[ $height ] = array();
-			}
-
-			array_push( $expected_array[ $height ], $weight );
-
-			add_post_meta( $post_id, 'region', 'tokyo' );
-			add_post_meta( $post_id, 'height', $height );
-			add_post_meta( $post_id, 'weight', $weight );
-		}
+		$post_id = $this->factory->post->create();
+		add_post_meta( $post_id, 'state', 'Wisconsin' );
+		add_post_meta( $post_id, 'city', 'tokyo' );
 
 		$args = array(
-			'orderby' => 'height weight',
-			'order'   => 'ASC',
-			'meta_key'   => 'region',
-			'meta_value' => 'tokyo',
+			'meta_query' => array(
+				'relation' => 'AND',
+				'state_clause' => array(
+					'key' => 'state',
+					'value' => 'Wisconsin',
+				),
+				'city_clause' => array(
+					'key' => 'city',
+					'value' => array(
+						'tokyo',
+						'osaka'
+					),
+					'compare' => 'IN',
+				),
+			),
+			'orderby' => array(
+				'post_name' => 'desc',
+				'city_clause' => 'ASC',
+				'state_clause' => 'DESC',
+			),
 		);
 
 		$the_query = new WP_Query( $args );
-		if ( $the_query->have_posts() ) {
-			while ( $the_query->have_posts() ) {
-				$the_query->the_post();
 
-				$height = get_post_meta( get_the_ID(), 'height' )[0];
-				$weight = get_post_meta( get_the_ID(), 'weight' )[0];
-
-				if ( ! array_key_exists( $height, $result_array ) ) {
-					$result_array[ $height ] = array();
-				}
-
-				array_push( $result_array[ $height ], $weight );
-			}
-		}
-
-		$this->assertEquals( $expected_array, $result_array );
+		$pos = strpos($the_query->request, 'ORDER');
+		$this->assertEquals( $expected_value, substr($the_query->request, $pos) );
 	}
 }

@@ -48,7 +48,15 @@ class Beyond_Wpdb_Meta_Query {
 			: $sql;
 	}
 
-	// WP_Meta_Query::get_sql参照
+	/**
+	 * @param $type
+	 * @param $queries
+	 * @param $primary_table
+	 * @param $primary_id_column
+	 * @param $context
+	 *
+	 * @return array|bool
+	 */
 	public function get_sql( $type, $queries, $primary_table, $primary_id_column, $context ) {
 		$meta_table = $this->_get_meta_table( $type );
 		if ( ! $meta_table ) {
@@ -70,7 +78,9 @@ class Beyond_Wpdb_Meta_Query {
 		return $sql;
 	}
 
-	// WP_Meta_Query::get_sql_clausesとほぼ同一で大丈夫かも
+	/**
+	 * @return array
+	 */
 	protected function get_sql_clauses() {
 		$queries = $this->queries;
 		$sql     = $this->get_sql_for_query( $queries );
@@ -82,7 +92,12 @@ class Beyond_Wpdb_Meta_Query {
 		return $sql;
 	}
 
-	// WP_Meta_Query::get_sql_for_queryとほぼ同一で大丈夫かも
+	/**
+	 * @param $query
+	 * @param int $depth
+	 *
+	 * @return array
+	 */
 	protected function get_sql_for_query( &$query, $depth = 0 ) {
 		$sql_chunks = array(
 			'join'  => array(),
@@ -147,7 +162,13 @@ class Beyond_Wpdb_Meta_Query {
 		return $sql;
 	}
 
-	// WP_Meta_Query::get_sql_for_clauseから大きく変える必要あり
+	/**
+	 * @param $clause
+	 * @param $parent_query
+	 * @param string $clause_key
+	 *
+	 * @return array
+	 */
 	public function get_sql_for_clause( &$clause, $parent_query, $clause_key = '' ) {
 		global $wpdb;
 
@@ -322,7 +343,6 @@ class Beyond_Wpdb_Meta_Query {
 			}
 		}
 
-		// ANDで連結
 		if ( 1 < count( $sql_chunks['where'] ) ) {
 			$sql_chunks['where'] = array( '( ' . implode( ' AND ', $sql_chunks['where'] ) . ' )' );
 		}
@@ -331,8 +351,13 @@ class Beyond_Wpdb_Meta_Query {
 	}
 
 
-	// 変換して大丈夫かどうか判断
+	/**
+	 * @param $query
+	 * Check to see if the query can be converted
+	 * @return bool
+	 */
 	protected function check( $query ) {
+
 		if ( !is_array( $query ) ) {
 			return false;
 		}
@@ -356,11 +381,15 @@ class Beyond_Wpdb_Meta_Query {
 		return true;
 	}
 
-	// jsonの独自テーブルのテーブル名を返す
+	/**
+	 * @param $type
+	 * Return your own json table
+	 * @return bool|string|null
+	 */
 	protected function _get_meta_table( $type ) {
 		global $wpdb;
 
-		if (!in_array( $type, ['post', 'user', 'comment'] ) ) {
+		if ( ! in_array( $type, ['post', 'user', 'comment'] ) ) {
 			return false;
 		}
 
@@ -375,7 +404,11 @@ class Beyond_Wpdb_Meta_Query {
 		return $json_table_name;
 	}
 
-	// キャスト
+	/**
+	 * @param string $type
+	 *
+	 * @return string
+	 */
 	public function get_cast_for_type( $type = '' ) {
 		if ( empty( $type ) ) {
 			return 'CHAR';
@@ -394,7 +427,11 @@ class Beyond_Wpdb_Meta_Query {
 		return $meta_type;
 	}
 
-	//　変換条件チェック
+	/**
+	 * @param $columns
+	 * key and value are set, and meta_compare_key is set to "=" or "EXISTS
+	 * @return bool
+	 */
 	protected function checkColumns( $columns ) {
 		$correct_compare_key = true;
 
@@ -413,25 +450,10 @@ class Beyond_Wpdb_Meta_Query {
 			? $wpdb->prepare( "JSON_EXTRACT(json, %s)", $key )
 			: $wpdb->prepare( "CAST(JSON_EXTRACT(json, %s) as $meta_type)", $key );
 	}
-
-	/**
-	 * Get a flattened list of sanitized meta clauses.
-	 *
-	 * This array should be used for clause lookup, as when the table alias and CAST type must be determined for
-	 * a value of 'orderby' corresponding to a meta clause.
-	 *
-	 * @since 4.2.0
-	 *
-	 * @return array Meta clauses.
-	 */
-	public function get_clauses() {
-		return $this->clauses;
-	}
 }
 
 add_filter( 'get_meta_sql', 'beyond_wpdb_meta_query_get_sql', 10, 5 );
 function beyond_wpdb_meta_query_get_sql( $sql, $queries, $type, $primary_table, $primary_id_column, $context = null ) {
-	global $beyond_wpdb_meta_query;
 	$beyond_wpdb_meta_query = new Beyond_Wpdb_Meta_Query();
 	return $beyond_wpdb_meta_query->get_meta_sql( $sql, $queries, $type, $primary_table, $primary_id_column, $context );
 }

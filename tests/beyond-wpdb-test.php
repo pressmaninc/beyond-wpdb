@@ -533,7 +533,7 @@ class Beyond_Wpdb_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * get_meta_sqlチェック - compareがBETWEENとNOTBETWEEN
+	 * get_meta_sql- WP_Query - BETWEEN or NOT BETWEEN pattern
 	 */
 	public function test_getMetaSql_post_between_or_notBetween()
 	{
@@ -572,7 +572,7 @@ class Beyond_Wpdb_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * get_meta_sqlチェック - 再帰的パターン
+	 * get_meta_sql - WP_Query - recursive pattern
 	 */
 	public function test_getMetaSql_post_recursive()
 	{
@@ -629,11 +629,11 @@ class Beyond_Wpdb_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * get_meta_sqlチェック - metauser_jsonテーブル
+	 * get_meta_sql - WP_User_Query
 	 */
 	public function test_getMetaSql_metaUserJson()
 	{
-		// userを作成
+		// create a user
 		$user_id = $this->factory->user->create();
 		add_user_meta( $user_id, 'language', 'japanese' );
 		add_user_meta( $user_id, 'hobby', 'walking' );
@@ -660,131 +660,13 @@ class Beyond_Wpdb_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * get_meta_sqlチェック - orderby - notArray
+	 * @param $method
+	 *
+	 * @return ReflectionMethod
+	 * @throws ReflectionException
 	 */
-	public function test_getMetaSql_orderBy_notArray()
-	{
-		$expected_array = array();
-		$result_array = array();
-
-		// 複数投稿
-		$post_ids = $this->factory->post->create_many( 10 );
-		foreach ( $post_ids as $post_id ) {
-			$rand = rand( 45, 75 );
-			array_push($expected_array, $rand );
-			add_post_meta( $post_id, 'region' , 'tokyo' );
-			add_post_meta( $post_id, 'deviation' , $rand );
-		}
-
-		$args = array(
-			'orderby' => 'deviation',
-			'order'   => 'ASC',
-			'meta_query' => array(
-				array(
-					'key'     => 'region',
-					'value'   => 'tokyo',
-					'compare' => '=',
-					'compare_key' => '='
-				)
-			)
-		);
-
-		$the_query = new WP_Query( $args );
-		if( $the_query->have_posts() ) {
-			while ( $the_query->have_posts() ) {
-				$the_query->the_post();
-				array_push( $result_array, get_post_meta( get_the_ID(), 'deviation' )[0]);
-			}
-		}
-
-		// 昇順にソート
-		sort( $expected_array );
-
-		$this->assertEquals( $expected_array, $result_array );
-	}
-
-	/**
-	 * get_meta_sqlチェック - orderby - array
-	 * 昇順、降順テストも同時に
-	 */
-	public function test_getMetaSql_orderBy_array()
-	{
-		$expected_array = array();
-		$result_array = array();
-
-		$height = 170;
-		$weight = 65;
-
-		// 複数投稿
-		$post_ids = $this->factory->post->create_many( 10 );
-		foreach ( $post_ids as $k => $post_id ) {
-
-			if ( $k % 3 === 0 ) {
-				$height += 5;
-			}
-			$weight++;
-
-			if ( !array_key_exists( $height, $expected_array ) ) {
-				$expected_array[$height] = array();
-			}
-
-			array_push( $expected_array[$height], $weight );
-
-			add_post_meta(  $post_id, 'region' , 'tokyo' );
-			add_post_meta(  $post_id, 'height' , $height );
-			add_post_meta(  $post_id, 'weight', $weight) ;
-		}
-
-		// heightは昇順、weightは降順
-		$args = array(
-			/*'orderby' => array(
-				'height' => 'ASC',
-				'weight' => 'DESC'
-			),*/
-			'orderby' => array(
-				'height' => 'ASC',
-				'meta_value' => 'ASC'
-			),
-			'meta_key' => 'region',
-			'meta_value' => 'tokyo',
-			/*'meta_query' => array(
-				array(
-					'key'     => 'region',
-					'value'   => 'tokyo',
-					'compare' => '='
-				)
-			)*/
-		);
-
-		$the_query = new WP_Query( $args );
-		if( $the_query->have_posts() ) {
-			while ( $the_query->have_posts() ) {
-				$the_query->the_post();
-
-				$height = get_post_meta( get_the_ID(), 'height' )[0];
-				$weight = get_post_meta( get_the_ID(), 'weight' )[0];
-
-				if ( !array_key_exists( $height, $result_array ) ) {
-					$result_array[ $height ] = array();
-				}
-
-				array_push( $result_array[$height], $weight );
-			}
-		}
-
-		$_expected_array = array();
-		foreach ( $expected_array as $k => $val ) {
-			rsort( $val );
-			$_expected_array[ $k ] = $val;
-		}
-
-		print_r($the_query->request);
-		$this->assertEquals( $_expected_array, $result_array );
-	}
-
 	protected function get_access_protected( $method )
 	{
-		// protectedなのでアクセス許可
 		$reflection = new ReflectionClass( $this->metaQuery );
 		$method = $reflection->getMethod( $method );
 		$method->setAccessible( true );
