@@ -35,10 +35,18 @@ class Beyond_Wpdb_Meta_Query {
 		return isset( $query['key'] ) || isset( $query['value'] );
 	}
 
-	/*
-	 *
+	/**
+	 * @param $sql
+	 * @param $queries
+	 * @param $type
+	 * @param $primary_table
+	 * @param $primary_id_column
+	 * @param $context
+	 * Convert $sql if the conversion is possible
+	 * @return array|bool
 	 */
 	public function get_meta_sql( $sql, $queries, $type, $primary_table, $primary_id_column, $context ) {
+
 		if ( ! $this->check( $queries ) ) {
 			return $sql;
 		}
@@ -212,6 +220,8 @@ class Beyond_Wpdb_Meta_Query {
 
 		$meta_compare     = isset( $clause['compare'] ) ? $clause['compare'] : '=';
 
+		$key = '$.' . trim( $clause['key'] );
+
 		// First build the JOIN clause, if one is required.
 		$join = '';
 
@@ -219,20 +229,9 @@ class Beyond_Wpdb_Meta_Query {
 		if ( false === $alias ) {
 			$alias = $this->meta_table;
 
-			// JOIN clauses for NOT EXISTS have their own syntax.
-			if ( 'NOT EXISTS' === $meta_compare ) {
-				$join .= " LEFT JOIN $this->meta_table";
-				$join .= " AS $alias";
-
-				$join .= $wpdb->prepare( " ON ($this->primary_table.$this->primary_id_column = $alias.$this->meta_id_column AND $alias.meta_key = %s )", $clause['key'] );
-
-				// All other JOIN clauses.
-			} else {
-				$join .= " INNER JOIN $this->meta_table";
-				$join .= " AS $alias";
-				$join .= " ON ( $this->primary_table.$this->primary_id_column = $alias.$this->meta_id_column )";
-
-			}
+			$join .= " INNER JOIN $this->meta_table";
+			$join .= " AS $alias";
+			$join .= " ON ( $this->primary_table.$this->primary_id_column = $alias.$this->meta_id_column )";
 
 			$this->table_aliases[] = $alias;
 			$sql_chunks['join'][]  = $join;
@@ -262,10 +261,13 @@ class Beyond_Wpdb_Meta_Query {
 		// Store the clause in our flat array.
 		$this->clauses[ $clause_key ] =& $clause;
 
+		if ( 'NOT EXISTS' === $meta_compare ) {
+			$sql_chunks['where'][] = $wpdb->prepare( "! JSON_CONTAINS_PATH($alias.json, 'one', %s)", $key );
+			// $sql_chunks['where'][] = $wpdb->prepare( "! JSON_EXTRACTS($alias.json, %s) = ''", $key );
+		}
+
 		// meta_value.
-		// チェック済みなのでkeyは存在するけど念の為チェック
 		if ( array_key_exists( 'value', $clause ) ) {
-			$key = '$.' . trim( $clause['key'] );
 			$meta_value = $clause['value'];
 
 			if ( in_array( $meta_compare, array( 'IN', 'NOT IN', 'BETWEEN', 'NOT BETWEEN' ) ) ) {
@@ -279,10 +281,8 @@ class Beyond_Wpdb_Meta_Query {
 			switch ( $meta_compare ) {
 				case 'IN':
 				case 'NOT IN':
-				    $meta_compare = $meta_compare === 'IN'
-					    ? '='
-					    : '!=';
-					$column = $this->getColumn( $meta_type, $key );
+				    $meta_compare = $meta_compare === 'IN' ? '=' : '!=';
+					$column = $this->get_column( $meta_type, $key, $alias );
 					$where = '';
 					if ( is_array( $meta_value ) ) {
 						foreach ( $meta_value as $k => $value ) {
@@ -304,7 +304,7 @@ class Beyond_Wpdb_Meta_Query {
 
 				case 'BETWEEN':
 				case 'NOT BETWEEN':
-					$column = $this->getColumn( $meta_type, $key );
+					$column = $this->get_column( $meta_type, $key, $alias );
 					$metaValue1 = $wpdb->prepare( '%s', $meta_value[0] );
 					$metaValue2 = $wpdb->prepare( '%s', $meta_value[1] );
 					$where = $meta_compare === 'BETWEEN'
@@ -315,14 +315,14 @@ class Beyond_Wpdb_Meta_Query {
 				case 'LIKE':
 				case 'NOT LIKE':
 					$meta_value = '%' . $wpdb->esc_like( $meta_value ) . '%';
-					$column = $this->getColumn( $meta_type, $key );
+					$column = $this->get_column( $meta_type, $key, $alias );
 					$where = $column . ' ' . $meta_compare . ' ' .$wpdb->prepare('%s' , $meta_value);
 					break;
 
 				// EXISTS with a value is interpreted as '='.
 				case 'EXISTS':
 					$meta_compare = '=';
-					$column = $this->getColumn( $meta_type, $key );
+					$column = $this->get_column( $meta_type, $key, $alias );
 					$where = $column . ' ' . $meta_compare . ' ' .$wpdb->prepare('%s' , $meta_value);
 					break;
 
@@ -332,7 +332,7 @@ class Beyond_Wpdb_Meta_Query {
 					break;
 
 				default:
-					$column = $this->getColumn( $meta_type, $key );
+					$column = $this->get_column( $meta_type, $key, $alias );
 					$where = $column . ' ' . $meta_compare . ' ' .$wpdb->prepare('%s' , $meta_value);
 					break;
 
@@ -356,7 +356,7 @@ class Beyond_Wpdb_Meta_Query {
 	 * Check to see if the query can be converted
 	 * @return bool
 	 */
-	protected function check( $query ) {
+	public function check( $query ) {
 
 		if ( !is_array( $query ) ) {
 			return false;
@@ -365,7 +365,7 @@ class Beyond_Wpdb_Meta_Query {
 		foreach ( $query as $key => $clause ) {
 			if ( is_array( $clause ) ) {
 				if ( $this->is_first_order_clause( $clause ) ) {
-					if ( !$this->checkColumns( $clause ) ) {
+					if ( ! $this->check_columns( $clause ) ) {
 						return false;
 					}
 				} else {
@@ -382,11 +382,28 @@ class Beyond_Wpdb_Meta_Query {
 	}
 
 	/**
+	 * @param $columns
+	 * key and value are set, and meta_compare_key is set to "=" or "EXISTS
+	 * @return bool
+	 */
+	protected function check_columns( $columns ) {
+		$correct_compare_key = true;
+
+		if ( isset( $columns['compare_key'] ) ) {
+			$correct_compare_key = $columns['compare_key'] === '=' || $columns['compare_key'] === 'EXISTS';
+		}
+
+		return isset( $columns['key'] ) &&
+		       isset( $columns['value'] ) &&
+		       $correct_compare_key;
+	}
+
+	/**
 	 * @param $type
 	 * Return your own json table
 	 * @return bool|string|null
 	 */
-	protected function _get_meta_table( $type ) {
+	public function _get_meta_table( $type ) {
 		global $wpdb;
 
 		if ( ! in_array( $type, ['post', 'user', 'comment'] ) ) {
@@ -427,28 +444,11 @@ class Beyond_Wpdb_Meta_Query {
 		return $meta_type;
 	}
 
-	/**
-	 * @param $columns
-	 * key and value are set, and meta_compare_key is set to "=" or "EXISTS
-	 * @return bool
-	 */
-	protected function checkColumns( $columns ) {
-		$correct_compare_key = true;
-
-		if ( isset( $columns['compare_key'] ) ) {
-			$correct_compare_key = $columns['compare_key'] === '=' || $columns['compare_key'] === 'EXISTS';
-		}
-
-		return isset( $columns['key'] ) &&
-		       isset( $columns['value'] ) &&
-		       $correct_compare_key;
-	}
-
-	protected function getColumn( $meta_type, $key ) {
+	protected function get_column( $meta_type, $key, $alias ) {
 		global $wpdb;
 		return 'CHAR' === $meta_type
-			? $wpdb->prepare( "JSON_EXTRACT(json, %s)", $key )
-			: $wpdb->prepare( "CAST(JSON_EXTRACT(json, %s) as $meta_type)", $key );
+			? $wpdb->prepare( "JSON_EXTRACT($alias.json, %s)", $key )
+			: $wpdb->prepare( "CAST(JSON_EXTRACT($alias.json, %s) as $meta_type)", $key );
 	}
 }
 

@@ -1,14 +1,11 @@
 <?php
 /**
- * Class Beyond_Wpdb_Test
+ * Class Beyond_Wpdb_Meta_Query_Test
  *
  * @package Beyond_Wpdb
  */
 
-// プラグインの読み込み
-require_once( plugin_dir_path( __FILE__ ) . '../beyond-wpdb.php' );
-
-class Beyond_Wpdb_Test extends WP_UnitTestCase {
+class Beyond_Wpdb_Meta_Query_Test extends WP_UnitTestCase {
 	protected $metaQuery = '';
 
 	public function setUp()
@@ -24,20 +21,16 @@ class Beyond_Wpdb_Test extends WP_UnitTestCase {
 	{
 		parent::tearDown();
 
-		global $wpdb;
-		$wpdb->get_results( "delete from wptests_postmeta_json" );
 		$register_hook = new Beyond_Wpdb_Register_Hook();
 		$register_hook::deactivation();
 	}
 
 	/**
-	 * queriesチェック - 成功
+	 * Test the check function - success
 	 */
 	public function test_check_success() {
+
 		$queries = array(
-			'meta_key' => 'key1',
-			'meta_value' => 'value1',
-			'meta_compare_key' => '=',
 			array(
 				'key'     => 'key2',
 				'value'   => 'value2',
@@ -55,7 +48,7 @@ class Beyond_Wpdb_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * queriesチェック - 失敗
+	 * Test the check function - failure
 	 */
 	public function test_check_failure() {
 		$queries = array(
@@ -79,9 +72,9 @@ class Beyond_Wpdb_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * queries再帰的チェック - 成功
+	 * Test the check function recursively - success
 	 */
-	public function test_check_recursive_success() {
+	public function test_check_recursively_success() {
 		$queries = array(
 			array(
 				'key'     => 'key1',
@@ -112,9 +105,9 @@ class Beyond_Wpdb_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * queries再帰的チェック - 失敗
+	 * Test the check function recursively - failure
 	 */
-	public function test_check_recursive_failure() {
+	public function test_check_recursively_failure() {
 		$queries = array(
 			array(
 				'key'     => 'key1',
@@ -145,9 +138,9 @@ class Beyond_Wpdb_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * 独自テーブル - 成功
+	 * Test the _get_meta_table function recursively - success
 	 */
-	public function test_getMetaTable_success()
+	public function test_get_meta_table_success()
 	{
 		global $wpdb;
 		$metaKey = ['post', 'user', 'comment'];
@@ -160,9 +153,9 @@ class Beyond_Wpdb_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * 独自テーブル - 失敗
+	 * Test the _get_meta_table function recursively - failure
 	 */
-	public function test_getMetaTable_failure()
+	public function test_get_meta_table_failure()
 	{
 		global $wpdb;
 		$metaKey = ['postA', 'userA', 'commentA'];
@@ -175,9 +168,9 @@ class Beyond_Wpdb_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * sqlチェック - join
+	 * Test the get_sql function to see if the join clause is correct
 	 */
-	public function test_getSql_check_join()
+	public function test_get_sql_join()
 	{
 		global $wpdb;
 
@@ -206,17 +199,19 @@ class Beyond_Wpdb_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * sqlチェック - where - compareが=とEXISTS
+	 * Test the get_sql function to see if the where clause is correct
+	 * When compare is "=" and "EXISTS"
+	 *
 	 */
-	public function test_getSql_check_where_equal_or_exists()
+	public function test_get_sql_where_equal_or_exists()
 	{
 		global $wpdb;
 
-		// sql[where]チェック
 		$expected_where = $this->remove_spaces(
-			"AND ( JSON_EXTRACT(json, '$.region') = 'tokyo' AND JSON_EXTRACT(json, '$.language') = 'japanese' )"
+			"AND ( JSON_EXTRACT(wptests_postmeta_json.json, '$.region') = 'tokyo' 
+					AND JSON_EXTRACT(wptests_postmeta_json.json, '$.language') = 'japanese' )"
 		);
-		// get_sqlの引数
+
 		$type = 'post';
 		$queries = array(
 			array(
@@ -235,7 +230,7 @@ class Beyond_Wpdb_Test extends WP_UnitTestCase {
 		$primary_table = $wpdb->prefix . 'posts';
 		$primary_id_column = 'id';
 		$context = null;
-		// get_sql実行
+
 		$method = $this->get_access_protected( 'get_sql' );
 		$sql = $method->invoke( $this->metaQuery, $type, $queries, $primary_table, $primary_id_column, $context );
 		$where = $this->remove_spaces( $sql['where'] );
@@ -243,21 +238,22 @@ class Beyond_Wpdb_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * sqlチェック - where - compareがLIKEとNOT LIKE
+	 * Test the get_sql function to see if the where clause is correct
+	 * When compare is "LIKE" and "NOT LIKE"
 	 */
-	public function test_getSql_check_where_like_or_notLike()
+	public function test_get_sql_where_like_or_not_like()
 	{
 		global $wpdb;
 
-		// sql[where]チェック
 		$metaValue1 = '%' . $wpdb->esc_like( 'tokyo' ) . '%';
 		$metaValue1 = $wpdb->prepare( '%s', $metaValue1 );
 		$metaValue2 = '%' . $wpdb->esc_like( 'japanese' ) . '%';
 		$metaValue2 = $wpdb->prepare( '%s', $metaValue2 );
 		$expected_where = $this->remove_spaces(
-			"AND ( JSON_EXTRACT(json, '$.region') LIKE $metaValue1 AND JSON_EXTRACT(json, '$.language') NOT LIKE $metaValue2 )"
+			"AND ( JSON_EXTRACT(wptests_postmeta_json.json, '$.region') LIKE $metaValue1 
+					AND JSON_EXTRACT(wptests_postmeta_json.json, '$.language') NOT LIKE $metaValue2 )"
 		);
-		// get_sqlの引数
+
 		$type = 'post';
 		$queries = array(
 			array(
@@ -276,7 +272,7 @@ class Beyond_Wpdb_Test extends WP_UnitTestCase {
 		$primary_table = $wpdb->prefix . 'posts';
 		$primary_id_column = 'id';
 		$context = null;
-		// get_sql実行
+
 		$method = $this->get_access_protected( 'get_sql' );
 		$sql = $method->invoke( $this->metaQuery, $type, $queries, $primary_table, $primary_id_column, $context );
 		$where = $this->remove_spaces( $sql['where'] );
@@ -284,18 +280,20 @@ class Beyond_Wpdb_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * sqlチェック - where - compareがINとNOT IN
+	 * Test the get_sql function to see if the where clause is correct
+	 * When compare is "IN" and "NOT IN"
 	 */
-	public function test_getSql_check_where_in_or_notIn()
+	public function test_get_sql_where_in_or_not_in()
 	{
 		global $wpdb;
 
-		// sql[where]チェック
+		$json = 'wptests_postmeta_json.json';
+
 		$expected_where = $this->remove_spaces(
-			"AND ( ( JSON_EXTRACT(json, '$.regions') = 'tokyo' OR JSON_EXTRACT(json, '$.regions') = 'osaka' OR JSON_EXTRACT(json, '$.regions') = 'kyoto' )
-					AND ( JSON_EXTRACT(json, '$.languages') != 'japanese' OR JSON_EXTRACT(json, '$.languages') != 'english' OR JSON_EXTRACT(json, '$.languages') != 'chinese' ) )"
+			"AND ( ( JSON_EXTRACT($json, '$.regions') = 'tokyo' OR JSON_EXTRACT($json, '$.regions') = 'osaka' OR JSON_EXTRACT($json, '$.regions') = 'kyoto' )
+					AND ( JSON_EXTRACT($json, '$.languages') != 'japanese' OR JSON_EXTRACT($json, '$.languages') != 'english' OR JSON_EXTRACT($json, '$.languages') != 'chinese' ) )"
 		);
-		// get_sqlの引数
+
 		$type = 'post';
 		$queries = array(
 			array(
@@ -322,7 +320,7 @@ class Beyond_Wpdb_Test extends WP_UnitTestCase {
 		$primary_table = $wpdb->prefix . 'posts';
 		$primary_id_column = 'id';
 		$context = null;
-		// get_sql実行
+
 		$method = $this->get_access_protected( 'get_sql' );
 		$sql = $method->invoke( $this->metaQuery, $type, $queries, $primary_table, $primary_id_column, $context );
 		$where = $this->remove_spaces( $sql['where'] );
@@ -330,18 +328,20 @@ class Beyond_Wpdb_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * sqlチェック - where - compareがBETWEENとNOT BETWEEN
+	 * Test the get_sql function to see if the where clause is correct
+	 * When compare is "BETWEEN" and "NOT BETWEEN"
 	 */
-	public function test_getSql_check_where_between_or_notBetween()
+	public function test_get_sql_where_between_or_not_between()
 	{
 		global $wpdb;
 
-		// sql[where]チェック
+		$json = 'wptests_postmeta_json.json';
+
 		$expected_where = $this->remove_spaces(
-			"AND ( ( '2020-05-01' <= JSON_EXTRACT(json, '$.date1') and JSON_EXTRACT(json, '$.date1') <= '2020-06-01' ) 
-					AND ( '2020-05-01' > JSON_EXTRACT(json, '$.date2') OR JSON_EXTRACT(json, '$.date2') > '2020-06-01' ) )"
+			"AND ( ( '2020-05-01' <= JSON_EXTRACT($json, '$.date1') and JSON_EXTRACT($json, '$.date1') <= '2020-06-01' ) 
+					AND ( '2020-05-01' > JSON_EXTRACT($json, '$.date2') OR JSON_EXTRACT($json, '$.date2') > '2020-06-01' ) )"
 		);
-		// get_sqlの引数
+
 		$type = 'post';
 		$queries = array(
 			array(
@@ -366,7 +366,7 @@ class Beyond_Wpdb_Test extends WP_UnitTestCase {
 		$primary_table = $wpdb->prefix . 'posts';
 		$primary_id_column = 'id';
 		$context = null;
-		// get_sql実行
+
 		$method = $this->get_access_protected( 'get_sql' );
 		$sql = $method->invoke( $this->metaQuery, $type, $queries, $primary_table, $primary_id_column, $context );
 		$where = $this->remove_spaces( $sql['where'] );
@@ -374,19 +374,20 @@ class Beyond_Wpdb_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * sqlチェック - where - 再帰パターン
+	 * Test the get_sql function to see if the where clause is correct recursively
 	 */
-	public function test_getSql_check_where_recursive()
+	public function test_get_sql_where_recursively()
 	{
 		global $wpdb;
 
-		// sql[where]チェック
+		$json = 'wptests_postmeta_json.json';
+
 		$expected_where = $this->remove_spaces(
-			"AND ( JSON_EXTRACT(json, '$.region') = 'tokyo' 
-					AND ( JSON_EXTRACT(json, '$.hobbies') = 'walking' OR JSON_EXTRACT(json, '$.hobbies') = 'fishing' ) 
-					AND ( JSON_EXTRACT(json, '$.language') = 'japanese' OR JSON_EXTRACT(json, '$.language') = 'english' ) )"
+			"AND ( JSON_EXTRACT($json, '$.region') = 'tokyo' 
+					AND ( JSON_EXTRACT($json, '$.hobbies') = 'walking' OR JSON_EXTRACT($json, '$.hobbies') = 'fishing' ) 
+					AND ( JSON_EXTRACT($json, '$.language') = 'japanese' OR JSON_EXTRACT($json, '$.language') = 'english' ) )"
 		);
-		// get_sqlの引数
+
 		$type = 'post';
 		$queries = array(
 			array(
@@ -423,7 +424,7 @@ class Beyond_Wpdb_Test extends WP_UnitTestCase {
 		$primary_table = $wpdb->prefix . 'posts';
 		$primary_id_column = 'id';
 		$context = null;
-		// get_sql実行
+
 		$method = $this->get_access_protected('get_sql');
 		$sql = $method->invoke( $this->metaQuery, $type, $queries, $primary_table, $primary_id_column, $context );
 		$where = $this->remove_spaces( $sql['where'] );
@@ -431,11 +432,11 @@ class Beyond_Wpdb_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * get_meta_sqlチェック - compareが=とEXISTS
+	 * get_meta_sql - "=" or "EXISTS" pattern
 	 */
-	public function test_getMetaSql_post_equal_or_exists()
+	public function test_get_meta_sql_post_equal_or_exists()
 	{
-		// postテーブルに投稿
+		// create a post
 		$post_id = $this->factory->post->create();
 		add_post_meta( $post_id, 'region', 'tokyo', false );
 		add_post_meta( $post_id, 'language', 'japanese', false );
@@ -464,11 +465,11 @@ class Beyond_Wpdb_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * get_meta_sqlチェック - compareがLIKEとNOT LIKE
+	 * get_meta_sql - "LIKE" or "NOT LIKE" pattern
 	 */
-	public function test_getMetaSql_post_like_or_notLike()
+	public function test_get_meta_sql_post_like_or_notLike()
 	{
-		// postテーブルに投稿
+		// create a post
 		$post_id = $this->factory->post->create();
 		add_post_meta( $post_id, 'region', 'tokyo', false );
 		add_post_meta( $post_id, 'language', 'japanese', false );
@@ -495,11 +496,11 @@ class Beyond_Wpdb_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * get_meta_sqlチェック - compareがINとNOT IN
+	 * get_meta_sql - IN or NOT IN pattern
 	 */
-	public function test_getMetaSql_post_in_or_notIn()
+	public function test_get_meta_sql_post_in_or_notIn()
 	{
-		// postテーブルに投稿
+		// create a post
 		$post_id = $this->factory->post->create();
 		add_post_meta( $post_id, 'hobby', 'waking', false );
 		add_post_meta( $post_id, 'language', 'japanese', false );
@@ -535,10 +536,10 @@ class Beyond_Wpdb_Test extends WP_UnitTestCase {
 	/**
 	 * get_meta_sql- WP_Query - BETWEEN or NOT BETWEEN pattern
 	 */
-	public function test_getMetaSql_post_between_or_notBetween()
+	public function test_get_meta_sql_post_between_or_notBetween()
 	{
 
-		// postテーブルに投稿
+		// create a post
 		$post_id = $this->factory->post->create();
 		add_post_meta( $post_id, 'date1', '2020-06-05', false );
 		add_post_meta( $post_id, 'date2', '2080-06-05', false );
@@ -574,9 +575,9 @@ class Beyond_Wpdb_Test extends WP_UnitTestCase {
 	/**
 	 * get_meta_sql - WP_Query - recursive pattern
 	 */
-	public function test_getMetaSql_post_recursive()
+	public function test_get_meta_sql_post_recursive()
 	{
-		// postテーブルに投稿
+		// create a post
 		$post_id = $this->factory->post->create();
 		add_post_meta( $post_id, 'region', 'tokyo', false );
 		add_post_meta( $post_id, 'language', 'japanese', false );
@@ -631,7 +632,7 @@ class Beyond_Wpdb_Test extends WP_UnitTestCase {
 	/**
 	 * get_meta_sql - WP_User_Query
 	 */
-	public function test_getMetaSql_metaUserJson()
+	public function test_get_meta_sql_metaUserJson()
 	{
 		// create a user
 		$user_id = $this->factory->user->create();
@@ -660,6 +661,28 @@ class Beyond_Wpdb_Test extends WP_UnitTestCase {
 	}
 
 	/**
+	 * get_meta_sql - WP_Comment_Query
+	 */
+	public function test_get_meta_sql_metaCommentJson()
+	{
+		// create a post
+		$post_id = $this->factory->post->create();
+		add_post_meta( $post_id, 'language', 'japanese' );
+		// create a comment
+		$comment_id = $this->factory->comment->create( array( 'post_id' => $post_id ) );
+		add_comment_meta( $comment_id, 'rating', '5' );
+
+
+		$args = array(
+			'meta_key' => 'rating',
+			'meta_value' => '5'
+		);
+
+		$the_query = new WP_Comment_Query( $args );
+		$this->assertCount( 1, $the_query->get_comments() );
+	}
+
+	/**
 	 * @param $method
 	 *
 	 * @return ReflectionMethod
@@ -673,7 +696,11 @@ class Beyond_Wpdb_Test extends WP_UnitTestCase {
 		return $method;
 	}
 
-	//左右の空白を取り除いて、改行とタブをスペースに変換、複数スペースを１つのスペースに変換
+	/**
+	 * @param $where
+	 *
+	 * @return string
+	 */
 	protected function remove_spaces( $where )
 	{
 		return preg_replace( '/\s(?=\s)/', '', preg_replace( '/[\n\r\t]/', ' ', trim( $where ) ) );

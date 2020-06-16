@@ -48,7 +48,9 @@ foreach( array_keys( BEYOND_WPDB_PRIMARYS ) as $primary ) {
 require_once( plugin_dir_path( __FILE__ ) . 'class/register-hook.php' );
 require_once( plugin_dir_path( __FILE__ ) . 'class/sql.php' );
 require_once( plugin_dir_path( __FILE__ ) . 'class/meta-query.php' );
-require_once( plugin_dir_path( __FILE__ ) . 'class/wp-query.php' );
+require_once( plugin_dir_path( __FILE__ ) . 'class/wp-orderby.php' );
+require_once( plugin_dir_path( __FILE__ ) . 'class/wp-user-orderby.php' );
+require_once( plugin_dir_path( __FILE__ ) . 'class/wp-comment-orderby.php' );
 
 // Plugin activation hook.
 register_activation_hook( __FILE__, ['Beyond_Wpdb_Register_Hook', 'activation'] );

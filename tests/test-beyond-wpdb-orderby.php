@@ -1,13 +1,11 @@
 <?php
 /**
- * Class Beyond_Wpdb_Query_OrderBy_Test
+ * Class Beyond_Wpdb_OrderBy_Test
  *
  * @package Beyond_Wpdb
  */
 
-require_once( plugin_dir_path( __FILE__ ) . '../beyond-wpdb.php' );
-
-class Beyond_Wpdb_Query_OrderBy_Test extends WP_UnitTestCase {
+class Beyond_Wpdb_OrderBy_Test extends WP_UnitTestCase {
 
 	public function setUp()
 	{
@@ -21,19 +19,18 @@ class Beyond_Wpdb_Query_OrderBy_Test extends WP_UnitTestCase {
 	{
 		parent::tearDown();
 
-		global $wpdb;
-		$wpdb->get_results( "delete from wptests_postmeta_json" );
 		$register_hook = new Beyond_Wpdb_Register_Hook();
 		$register_hook::deactivation();
 	}
 
 
 	/**
-	 * Wp_Query - orderby
+	 * Wp_Query orderby test
 	 * Check that the orderby clause is converted correctly
 	 */
-	public function test_check_orderby_clause() {
-		$expected_value = "ORDER BY JSON_EXTRACT(json, '$.region') DESC LIMIT 0, 10";
+	public function test_check_orderby_clause_converted() {
+		$alias = esc_sql( constant( beyond_wpdb_get_define_table_name( 'post' ) ) );
+		$expected_value = "ORDER BY JSON_EXTRACT($alias.json, '$.region') DESC";
 
 		$post_id = $this->factory->post->create();
 		add_post_meta( $post_id, 'region', 'tokyo' );
@@ -51,16 +48,19 @@ class Beyond_Wpdb_Query_OrderBy_Test extends WP_UnitTestCase {
 
 		$the_query = new WP_Query( $args );
 
-		$pos = strpos($the_query->request, 'ORDER');
-		$this->assertEquals( $expected_value, substr($the_query->request, $pos) );
+		$pos = strpos( $the_query->request, 'ORDER' );
+		$result = substr( $the_query->request, $pos );
+		$result = trim( strstr( $result, 'LIMIT', true ) );
+		$this->assertEquals( $expected_value, $result );
 	}
 
 	/**
-	 * Wp_Query - orderby
-	 * Check that the orderby clause is converted correctly
+	 * Wp_Query orderby test
+	 * Check that the complex orderby clause is converted correctly
 	 */
-	public function test_check_orderby_complex() {
-		$expected_value = "ORDER BY wptests_posts.post_name DESC, CAST(JSON_EXTRACT(json, '$.city') AS CHAR) ASC, JSON_EXTRACT(json, '$.state') DESC LIMIT 0, 10";
+	public function test_check_complex_orderby_clause_converted() {
+		$alias = esc_sql( constant( beyond_wpdb_get_define_table_name( 'post' ) ) );
+		$expected_value = "ORDER BY CAST(JSON_EXTRACT($alias.json, '$.city') AS CHAR) ASC, JSON_EXTRACT($alias.json, '$.state') DESC";
 
 		$post_id = $this->factory->post->create();
 		add_post_meta( $post_id, 'state', 'Wisconsin' );
@@ -72,6 +72,7 @@ class Beyond_Wpdb_Query_OrderBy_Test extends WP_UnitTestCase {
 				'state_clause' => array(
 					'key' => 'state',
 					'value' => 'Wisconsin',
+					'compare' => '='
 				),
 				'city_clause' => array(
 					'key' => 'city',
@@ -83,15 +84,17 @@ class Beyond_Wpdb_Query_OrderBy_Test extends WP_UnitTestCase {
 				),
 			),
 			'orderby' => array(
-				'post_name' => 'desc',
 				'city_clause' => 'ASC',
 				'state_clause' => 'DESC',
-			),
+			)
 		);
 
 		$the_query = new WP_Query( $args );
 
-		$pos = strpos($the_query->request, 'ORDER');
-		$this->assertEquals( $expected_value, substr($the_query->request, $pos) );
+		$pos = strpos( $the_query->request, 'ORDER' );
+		$result = substr( $the_query->request, $pos );
+		$result = trim( strstr( $result, 'LIMIT', true ) );
+		$this->assertEquals( $expected_value, $result );
 	}
+
 }

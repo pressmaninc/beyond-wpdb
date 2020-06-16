@@ -1,10 +1,10 @@
 <?php
 /**
- * Class Beyond_Wpdb_Wp_Query
+ * Class Beyond_Wpdb_Orderby
  * Wordpress version: 5.4.1
  */
 
-class Beyond_Wpdb_Wp_Query {
+class Beyond_Wpdb_Orderby {
 	/**
 	 * Query vars, after parsing
 	 */
@@ -23,7 +23,7 @@ class Beyond_Wpdb_Wp_Query {
 			$orderby = explode( ',', $orderby );
 			$_orderby = is_array( $query->query['orderby'] ) ? array_keys( $query->query['orderby'] ) : array_keys( array( $query->query['orderby'] ) );
 			$clauses_keys = array_keys( $clauses );
-
+			$alias = esc_sql( constant( beyond_wpdb_get_define_table_name( 'post' ) ) );
 
 			foreach ( $orderby as $key => $val ) {
 				$order = explode( ' ', $val );
@@ -42,7 +42,7 @@ class Beyond_Wpdb_Wp_Query {
 					}
 
 					if ( in_array( $clause_key, $_orderby ) ) {
-						$orderby[$key] = "CAST(JSON_EXTRACT(json, '$.{$clause['key']}') AS {$clause['cast']}) $order";
+						$orderby[$key] = "CAST(JSON_EXTRACT($alias.json, '$.{$clause['key']}') AS {$clause['cast']}) $order";
 					}
 
 				} elseif ( strpos( $val, 'meta_value' ) ) {
@@ -54,9 +54,9 @@ class Beyond_Wpdb_Wp_Query {
 					}
 
 					if ( ! empty( $clause['type'] ) ) {
-						$orderby[$key] = "CAST(JSON_EXTRACT(json, '$.{$clause['key']}') AS {$clause['cast']}) $order";
+						$orderby[$key] = "CAST(JSON_EXTRACT($alias.json, '$.{$clause['key']}') AS {$clause['cast']}) $order";
 					} else {
-						$orderby[$key] = "JSON_EXTRACT(json, '$.{$clause['key']}') $order";
+						$orderby[$key] = "JSON_EXTRACT($alias.json, '$.{$clause['key']}') $order";
 					}
 				}
 
@@ -75,63 +75,21 @@ class Beyond_Wpdb_Wp_Query {
 	protected function check( $query ) {
 
 		$q = $query->query;
+		$beyond_wpdb_meta_query = new Beyond_Wpdb_Meta_Query();
 
 		if ( ! is_array( $query->meta_query->queries ) ) {
 			return false;
 		}
 
 		//　Convert only if it is joined with the json table and an orderby clause is specified.
-		return $this->jsonTable_or_not( $query->meta_query->queries ) && ( isset( $q['orderby'] ) && $q['orderby'] !== '' );
+		return $beyond_wpdb_meta_query->check( $query->meta_query->queries ) && ( isset( $q['orderby'] ) && $q['orderby'] !== '' );
 
-	}
-
-	/**
-	 * @param $queries
-	 * Recursively check if it is joined with the json table
-	 * The condition for joining with the json table is that key and value must be specified　
-	 * and meta_compare_key is either "=" or "EXISTS".
-	 * @return bool
-	 */
-	protected function jsonTable_or_not( $queries ) {
-
-		foreach ( $queries as $k => $val ) {
-			if ( is_array( $val ) ) {
-				if ( isset( $val['key'] ) || isset( $val['value'] ) ) {
-					if ( !$this->check_isset_key_value( $val ) ) {
-						return false;
-					}
-				} else {
-					if ( !$this->jsonTable_or_not( $val ) ) {
-						return false;
-					} else {
-						continue;
-					}
-				}
-			}
-		}
-
-		return true;
-	}
-
-	/**
-	 * @param $val
-	 *
-	 * @return bool
-	 */
-	protected function check_isset_key_value( $val ) {
-		$correct_meta_compare_key = true;
-
-		if ( isset( $val['compare_key'] ) ) {
-			$correct_meta_compare_key = $val['compare_key'] === '=' || $val['compare_key'] === 'EXISTS';
-		}
-
-		return isset( $val['key'] ) && isset( $val['value'] ) && $correct_meta_compare_key;
 	}
 }
 
 add_filter( 'posts_orderby_request', 'beyond_wpdb_wp_query_parse_orderby', 10, 2 );
 function beyond_wpdb_wp_query_parse_orderby( $orderby, $query ) {
-	$beyond_wpdb_wp_query = new Beyond_Wpdb_Wp_Query();
+	$beyond_wpdb_orderby = new Beyond_Wpdb_Orderby();
 
-	return $beyond_wpdb_wp_query->_parse_orderby( $orderby, $query );
+	return $beyond_wpdb_orderby->_parse_orderby( $orderby, $query );
 }
