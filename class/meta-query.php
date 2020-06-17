@@ -263,7 +263,6 @@ class Beyond_Wpdb_Meta_Query {
 
 		if ( 'NOT EXISTS' === $meta_compare ) {
 			$sql_chunks['where'][] = $wpdb->prepare( "! JSON_CONTAINS_PATH($alias.json, 'one', %s)", $key );
-			// $sql_chunks['where'][] = $wpdb->prepare( "! JSON_EXTRACTS($alias.json, %s) = ''", $key );
 		}
 
 		// meta_value.

@@ -10,11 +10,11 @@ class Beyond_Wpdb_Meta_Query_Test extends WP_UnitTestCase {
 
 	public function setUp()
 	{
-		parent::setUp();
-
 		$this->metaQuery = new Beyond_Wpdb_Meta_Query();
 		$register_hook = new Beyond_Wpdb_Register_Hook();
 		$register_hook::activation();
+
+		parent::setUp();
 	}
 
 	public function tearDown()
@@ -671,7 +671,6 @@ class Beyond_Wpdb_Meta_Query_Test extends WP_UnitTestCase {
 		// create a comment
 		$comment_id = $this->factory->comment->create( array( 'post_id' => $post_id ) );
 		add_comment_meta( $comment_id, 'rating', '5' );
-
 
 		$args = array(
 			'meta_key' => 'rating',

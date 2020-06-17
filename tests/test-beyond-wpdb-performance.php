@@ -9,10 +9,11 @@ class Beyond_Wpdb_Performance_Test extends WP_UnitTestCase {
 
 	public function setUp()
 	{
-		parent::setUp();
 
 		$register_hook = new Beyond_Wpdb_Register_Hook();
 		$register_hook::activation();
+
+		parent::setUp();
 
 		$post_ids = $this->factory->post->create_many( 100 );
 		foreach ( $post_ids as $post_id ) {

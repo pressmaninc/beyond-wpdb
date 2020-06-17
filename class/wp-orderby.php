@@ -10,20 +10,28 @@ class Beyond_Wpdb_Orderby {
 	 */
 	public $query_vars = array();
 
-	public function _parse_orderby( $orderby, $query ) {
+	public function _parse_orderby( $orderby, $query, $type ) {
 
 		//　Check if $orderby can be converted
 		if ( ! $this->check( $query ) ) {
-			return $orderby;
+			return false;
 		}
 
+		// set $orderby
+		if ( $type === 'user' ) {
+			$orderby = $query->query_orderby;
+		} elseif ( $type === 'comment' ) {
+			$orderby = $orderby['orderby'];
+		}
+
+		$query_vars = $query->query_vars;
 		//　$orderby contains meta_value
 		if ( strpos( $orderby, 'meta_value' ) ) {
 			$clauses = $query->meta_query->get_clauses();
 			$orderby = explode( ',', $orderby );
-			$_orderby = is_array( $query->query['orderby'] ) ? array_keys( $query->query['orderby'] ) : array_keys( array( $query->query['orderby'] ) );
+			$_orderby = is_array( $query_vars['orderby'] ) ? array_keys( $query_vars['orderby'] ) : array_keys( array( $query_vars['orderby'] ) );
 			$clauses_keys = array_keys( $clauses );
-			$alias = esc_sql( constant( beyond_wpdb_get_define_table_name( 'post' ) ) );
+			$alias = esc_sql( constant( beyond_wpdb_get_define_table_name( $type ) ) );
 
 			foreach ( $orderby as $key => $val ) {
 				$order = explode( ' ', $val );
@@ -62,9 +70,10 @@ class Beyond_Wpdb_Orderby {
 
 			}
 			$orderby = implode( ', ', $orderby );
+			return $orderby;
 		}
 
-		return $orderby;
+		return false;
 	}
 
 	/**
@@ -74,7 +83,7 @@ class Beyond_Wpdb_Orderby {
 	 */
 	protected function check( $query ) {
 
-		$q = $query->query;
+		$q = $query->query_vars;
 		$beyond_wpdb_meta_query = new Beyond_Wpdb_Meta_Query();
 
 		if ( ! is_array( $query->meta_query->queries ) ) {
@@ -88,8 +97,53 @@ class Beyond_Wpdb_Orderby {
 }
 
 add_filter( 'posts_orderby_request', 'beyond_wpdb_wp_query_parse_orderby', 10, 2 );
+/**
+ * @param $orderby
+ * @param $query
+ * Convert the order by clause in Wp_Query
+ * @return array|bool|mixed
+ */
 function beyond_wpdb_wp_query_parse_orderby( $orderby, $query ) {
 	$beyond_wpdb_orderby = new Beyond_Wpdb_Orderby();
+	$result = $beyond_wpdb_orderby->_parse_orderby( $orderby, $query, 'post' );
 
-	return $beyond_wpdb_orderby->_parse_orderby( $orderby, $query );
+	if ( ! $result ) {
+		return $orderby;
+	}
+
+	return $result;
+}
+
+add_filter( 'comments_clauses', 'beyond_wpdb_wp_comment_query_parse_orderby', 10, 2 );
+/**
+ * @param $clauses
+ * @param $comment_query
+ * Convert the order by clause in Wp_Comment_Query
+ * @return mixed
+ */
+function beyond_wpdb_wp_comment_query_parse_orderby( $clauses, $comment_query ) {
+	$beyond_wpdb_orderby = new Beyond_Wpdb_Orderby();
+	$result = $beyond_wpdb_orderby->_parse_orderby( $clauses, $comment_query, 'comment' );
+
+	if ( ! $result ) {
+		return $clauses;
+	}
+
+	$clauses['orderby'] = $result;
+	return $clauses;
+}
+
+add_action( 'pre_user_query', 'beyond_wpdb_wp_user_query_parse_orderby', 10, 2 );
+/**
+ * @param $query
+ * Convert the order by clause in Wp_User_Query
+ */
+function beyond_wpdb_wp_user_query_parse_orderby( $query ) {
+	$beyond_wpdb_orderby = new Beyond_Wpdb_Orderby();
+	$result = $beyond_wpdb_orderby->_parse_orderby( '', $query, 'user' );
+
+	if ( $result !== false ) {
+		$query->query_orderby = 'ORDER BY ' . $result;
+	}
+
 }
