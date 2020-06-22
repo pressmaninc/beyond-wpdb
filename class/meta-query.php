@@ -1,4 +1,8 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /**
  * Class Beyond_Wpdb_Meta_Query
  * Wordpress version: 5.4.1
@@ -49,6 +53,12 @@ class Beyond_Wpdb_Meta_Query {
 
 		if ( ! $this->check( $queries ) ) {
 			return $sql;
+		}
+
+		if ( ! is_null( $context ) ) {
+			if ( isset( $context->query_vars['suppress_filters'] ) && $context->query_vars['suppress_filters'] ) {
+				return $sql;
+			}
 		}
 
 		return $this->get_sql( $type, $queries, $primary_table, $primary_id_column, $context )
@@ -447,11 +457,11 @@ class Beyond_Wpdb_Meta_Query {
 		global $wpdb;
 		return 'CHAR' === $meta_type
 			? $wpdb->prepare( "JSON_EXTRACT($alias.json, %s)", $key )
-			: $wpdb->prepare( "CAST(JSON_EXTRACT($alias.json, %s) as $meta_type)", $key );
+			: $wpdb->prepare( "CAST( JSON_UNQUOTE( JSON_EXTRACT($alias.json, %s) ) as $meta_type )", $key );
 	}
 }
 
-add_filter( 'get_meta_sql', 'beyond_wpdb_meta_query_get_sql', 10, 5 );
+add_filter( 'get_meta_sql', 'beyond_wpdb_meta_query_get_sql', 10, 6 );
 function beyond_wpdb_meta_query_get_sql( $sql, $queries, $type, $primary_table, $primary_id_column, $context = null ) {
 	$beyond_wpdb_meta_query = new Beyond_Wpdb_Meta_Query();
 	return $beyond_wpdb_meta_query->get_meta_sql( $sql, $queries, $type, $primary_table, $primary_id_column, $context );

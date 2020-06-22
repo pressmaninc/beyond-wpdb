@@ -62,9 +62,6 @@ class Beyond_Wpdb_Meta_Query_Test extends WP_UnitTestCase {
 				'value'   => 'value2',
 				'compare_key' => 'IN',
 			),
-			'meta_key' => 'key3',
-			'meta_value' => 'value3',
-			'meta_compare_key' => 'LIKE',
 		);
 
 		$method = $this->get_access_protected( 'check' );

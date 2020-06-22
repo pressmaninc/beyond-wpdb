@@ -1,4 +1,8 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /**
  * Class Beyond_Wpdb_Orderby
  * Wordpress version: 5.4.1
