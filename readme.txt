@@ -33,37 +33,38 @@ This plugin avoids complex joins and prevents slowdowns by storing all the meta 
 * commentmeta_json (for comment table)
 
 == Columns in each table ==
-postmeta_json
-* post_id(int)
-* json(json)
-usermeta_json
-* post_id(int)
-* json(json)
-commentmeta_json
-* post_id(int)
-* json(json)
+* postmeta_json
+    * post_id(int)
+    * json(json)
+* usermeta_json
+    * post_id(int)
+    * json(json)
+* commentmeta_json
+    * post_id(int)
+    * json(json)
 
 == Example of storing data in JSON type column ==
 <pre>{ "state": "Wisconsin", "city": "Winter" } </pre>
 
 == Results of Speed Measurement ==
 ex ) Create 100 posts and 50 meta data for each post, and combine them 9 times.
+
 * postmeta_json
-Equal:0.04
-IN:0.09
-NOT IN:0.06
-LIKE:0.03
-NOT LIKE:0.03
-BETWEEN:0.04
-NOT BETWEEN:0.04
+    * Equal:0.04
+    * IN:0.09
+    * NOT IN:0.06
+    * LIKE:0.03
+    * NOT LIKE:0.03
+    * BETWEEN:0.04
+    * NOT BETWEEN:0.04
 * postmeta
-Equal:4.72
-IN:4.79
-NOT IN:4.74
-LIKE:0.64
-NOT LIKE:0.66
-BETWEEN:0.63
-NOT BETWEEN:0.63
+    * Equal:4.72
+    * IN:4.79
+    * NOT IN:4.74
+    * LIKE:0.64
+    * NOT LIKE:0.66
+    * BETWEEN:0.63
+    * NOT BETWEEN:0.63
 
 == Installation ==
 1.Download the plugin
