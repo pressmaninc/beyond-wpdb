@@ -456,7 +456,7 @@ class Beyond_Wpdb_Meta_Query {
 	protected function get_column( $meta_type, $key, $alias ) {
 		global $wpdb;
 		return 'CHAR' === $meta_type
-			? $wpdb->prepare( "JSON_EXTRACT($alias.json, %s)", $key )
+			? $wpdb->prepare( "JSON_UNQUOTE( JSON_EXTRACT($alias.json, %s) )", $key )
 			: $wpdb->prepare( "CAST( JSON_UNQUOTE( JSON_EXTRACT($alias.json, %s) ) as $meta_type )", $key );
 	}
 }

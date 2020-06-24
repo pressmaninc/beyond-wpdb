@@ -205,8 +205,8 @@ class Beyond_Wpdb_Meta_Query_Test extends WP_UnitTestCase {
 		global $wpdb;
 
 		$expected_where = $this->remove_spaces(
-			"AND ( JSON_EXTRACT(wptests_postmeta_json.json, '$.region') = 'tokyo' 
-					AND JSON_EXTRACT(wptests_postmeta_json.json, '$.language') = 'japanese' )"
+			"AND ( JSON_UNQUOTE( JSON_EXTRACT(wptests_postmeta_json.json, '$.region') ) = 'tokyo' 
+					AND JSON_UNQUOTE( JSON_EXTRACT(wptests_postmeta_json.json, '$.language') ) = 'japanese' )"
 		);
 
 		$type = 'post';
@@ -247,8 +247,8 @@ class Beyond_Wpdb_Meta_Query_Test extends WP_UnitTestCase {
 		$metaValue2 = '%' . $wpdb->esc_like( 'japanese' ) . '%';
 		$metaValue2 = $wpdb->prepare( '%s', $metaValue2 );
 		$expected_where = $this->remove_spaces(
-			"AND ( JSON_EXTRACT(wptests_postmeta_json.json, '$.region') LIKE $metaValue1 
-					AND JSON_EXTRACT(wptests_postmeta_json.json, '$.language') NOT LIKE $metaValue2 )"
+			"AND ( JSON_UNQUOTE( JSON_EXTRACT(wptests_postmeta_json.json, '$.region') ) LIKE $metaValue1 
+					AND JSON_UNQUOTE( JSON_EXTRACT(wptests_postmeta_json.json, '$.language') ) NOT LIKE $metaValue2 )"
 		);
 
 		$type = 'post';
@@ -287,8 +287,8 @@ class Beyond_Wpdb_Meta_Query_Test extends WP_UnitTestCase {
 		$json = 'wptests_postmeta_json.json';
 
 		$expected_where = $this->remove_spaces(
-			"AND ( ( JSON_EXTRACT($json, '$.regions') = 'tokyo' OR JSON_EXTRACT($json, '$.regions') = 'osaka' OR JSON_EXTRACT($json, '$.regions') = 'kyoto' )
-					AND ( JSON_EXTRACT($json, '$.languages') != 'japanese' OR JSON_EXTRACT($json, '$.languages') != 'english' OR JSON_EXTRACT($json, '$.languages') != 'chinese' ) )"
+			"AND ( ( JSON_UNQUOTE( JSON_EXTRACT($json, '$.regions') ) = 'tokyo' OR JSON_UNQUOTE( JSON_EXTRACT($json, '$.regions') ) = 'osaka' OR JSON_UNQUOTE( JSON_EXTRACT($json, '$.regions') ) = 'kyoto' )
+					AND ( JSON_UNQUOTE( JSON_EXTRACT($json, '$.languages') ) != 'japanese' OR JSON_UNQUOTE( JSON_EXTRACT($json, '$.languages') ) != 'english' OR JSON_UNQUOTE( JSON_EXTRACT($json, '$.languages') ) != 'chinese' ) )"
 		);
 
 		$type = 'post';
@@ -335,8 +335,8 @@ class Beyond_Wpdb_Meta_Query_Test extends WP_UnitTestCase {
 		$json = 'wptests_postmeta_json.json';
 
 		$expected_where = $this->remove_spaces(
-			"AND ( ( '2020-05-01' <= JSON_EXTRACT($json, '$.date1') and JSON_EXTRACT($json, '$.date1') <= '2020-06-01' ) 
-					AND ( '2020-05-01' > JSON_EXTRACT($json, '$.date2') OR JSON_EXTRACT($json, '$.date2') > '2020-06-01' ) )"
+			"AND ( ( '2020-05-01' <= JSON_UNQUOTE( JSON_EXTRACT($json, '$.date1') ) and JSON_UNQUOTE( JSON_EXTRACT($json, '$.date1') ) <= '2020-06-01' ) 
+					AND ( '2020-05-01' > JSON_UNQUOTE( JSON_EXTRACT($json, '$.date2') ) OR JSON_UNQUOTE( JSON_EXTRACT($json, '$.date2') ) > '2020-06-01' ) )"
 		);
 
 		$type = 'post';
@@ -380,9 +380,9 @@ class Beyond_Wpdb_Meta_Query_Test extends WP_UnitTestCase {
 		$json = 'wptests_postmeta_json.json';
 
 		$expected_where = $this->remove_spaces(
-			"AND ( JSON_EXTRACT($json, '$.region') = 'tokyo' 
-					AND ( JSON_EXTRACT($json, '$.hobbies') = 'walking' OR JSON_EXTRACT($json, '$.hobbies') = 'fishing' ) 
-					AND ( JSON_EXTRACT($json, '$.language') = 'japanese' OR JSON_EXTRACT($json, '$.language') = 'english' ) )"
+			"AND ( JSON_UNQUOTE( JSON_EXTRACT($json, '$.region') ) = 'tokyo' 
+					AND ( JSON_UNQUOTE( JSON_EXTRACT($json, '$.hobbies') ) = 'walking' OR JSON_UNQUOTE( JSON_EXTRACT($json, '$.hobbies') ) = 'fishing' ) 
+					AND ( JSON_UNQUOTE( JSON_EXTRACT($json, '$.language') ) = 'japanese' OR JSON_UNQUOTE( JSON_EXTRACT($json, '$.language') ) = 'english' ) )"
 		);
 
 		$type = 'post';
@@ -637,6 +637,7 @@ class Beyond_Wpdb_Meta_Query_Test extends WP_UnitTestCase {
 		add_user_meta( $user_id, 'hobby', 'walking' );
 
 		$args = array(
+			'role' => 'subscriber',
 			'meta_query' => array(
 				array(
 					'key'     => 'language',
@@ -649,7 +650,7 @@ class Beyond_Wpdb_Meta_Query_Test extends WP_UnitTestCase {
 					'value'   => 'walking',
 					'compare' => '=',
 					'compare_key' => '='
-				)
+				),
 			)
 		);
 
