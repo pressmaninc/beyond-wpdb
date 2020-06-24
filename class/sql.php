@@ -1,4 +1,8 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /**
  * Beyond Wpdb table and trigger SQL.
  */
@@ -272,6 +276,7 @@ class Beyond_Wpdb_Sql {
 	function data_init() {
 		foreach( BEYOND_WPDB_PRIMARYS as $primary => $values ) {
 			$this->data_init_sql( $primary, $values['primary_table_name'], $values['primary_table_key'], $values['meta_table_name'], $values['meta_table_key'] );
+			$this->delete_non_existent_data_from_json( $primary, $values['primary_table_name'], $values['primary_table_key'] );
 		}
 	}
 
@@ -304,6 +309,29 @@ class Beyond_Wpdb_Sql {
 				ON DUPLICATE
 				KEY
 				UPDATE json = VALUES(json)';
+		$wpdb->query( $sql );
+	}
+
+	/**
+	 * delete non-existent data from json table to posts table
+	 *
+	 * @param $primary
+	 * @param $primary_table_name
+	 * @param $primary_table_key
+	 * @return void
+	 */
+	protected function delete_non_existent_data_from_json( $primary, $primary_table_name, $primary_table_key ) {
+		global $wpdb;
+
+		$table_name = esc_sql( constant( beyond_wpdb_get_define_table_name( $primary ) ) );
+		$primary_table_name = esc_sql( $primary_table_name );
+		$primary_table_key = esc_sql( $primary_table_key );
+		$id = $primary . '_id';
+
+		$sql = 'DELETE FROM ' . $table_name .
+		       ' WHERE ' . $table_name . '.' . $id .
+		       ' NOT IN (SELECT ' . $primary_table_key . ' from ' . $primary_table_name . ')';
+
 		$wpdb->query( $sql );
 	}
 }
