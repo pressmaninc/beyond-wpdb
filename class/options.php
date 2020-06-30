@@ -13,7 +13,9 @@ class Beyond_Wpdb_Settings_page {
 	{
 		add_action( 'admin_menu', array( $this, 'add_beyond_wpdb_settings_page' ) );
 		add_action( 'admin_init', array( $this, 'page_init' ) );
-		$this->get_columns();
+		$column_class = new Column();
+		$column_class->set_columns();
+		$this->columns = $column_class->get_columns();
 	}
 
 	/**
@@ -99,49 +101,29 @@ class Beyond_Wpdb_Settings_page {
 			'virtual_columns_section'
 		);
 
-		$title = $this->get_specified_table_columns( 'post' );
 		add_settings_field(
 			'postmeta_json', // id
-			"$title", // title
+			"postmeta_json", // title
 			array( $this, 'print_postmeta_json_field' ), // callback
 			'virtual_columns_section', // section id
 			'setting_section_id'
 		);
 
-		$title = $this->get_specified_table_columns( 'user' );
 		add_settings_field(
 			'usermeta_json',
-			"$title",
+			"usermeta_json",
 			array( $this, 'print_usermeta_json_field' ),
 			'virtual_columns_section',
 			'setting_section_id'
 		);
 
-		$title = $this->get_specified_table_columns( 'comment' );
 		add_settings_field(
-			'commentmeta_json',
-			"$title",
-			array( $this, 'print_commentmeta_json_field' ),
-			'virtual_columns_section',
+			'commentmeta_json', // id
+			"commentmeta_json", // title
+			array( $this, 'print_commentmeta_json_field' ), // callback
+			'virtual_columns_section', // section id
 			'setting_section_id'
 		);
-	}
-
-	/**
-	 * get all meta_json table columns
-	 */
-	public function get_columns()
-	{
-		global $wpdb;
-		foreach( BEYOND_WPDB_PRIMARYS as $primary => $values ) {
-			$table_name = esc_sql( constant( beyond_wpdb_get_define_table_name( $primary ) ) );
-			$columns = $wpdb->get_results( "show columns from {$table_name}" );
-			$this->columns[$table_name] = array();
-
-			foreach ( $columns as $val ) {
-				array_push( $this->columns[$table_name], $val->Field );
-			}
-		}
 	}
 
 	/**
@@ -155,18 +137,21 @@ class Beyond_Wpdb_Settings_page {
 		if( isset( $input['postmeta_json'] ) ) {
 			$columns = explode( PHP_EOL, $input['postmeta_json'] );
 			$columns = $this->sanitize_each_columns_and_create_virtual_column_sql( $columns, 'post' );
+			$columns = $this->delete_virtual_column( $columns, 'post' );
 			$new_input['postmeta_json'] = implode( ',', $columns );
 		}
 
 		if( isset( $input['usermeta_json'] ) ) {
 			$columns = explode( PHP_EOL, $input['usermeta_json'] );
 			$columns = $this->sanitize_each_columns_and_create_virtual_column_sql( $columns, 'user' );
+			$columns = $this->delete_virtual_column( $columns, 'user' );
 			$new_input['usermeta_json'] = implode( ',', $columns );
 		}
 
 		if( isset( $input['commentmeta_json'] ) ) {
 			$columns = explode( PHP_EOL, $input['commentmeta_json'] );
 			$columns = $this->sanitize_each_columns_and_create_virtual_column_sql( $columns, 'comment' );
+			$columns = $this->delete_virtual_column( $columns, 'comment' );
 			$new_input['commentmeta_json'] = implode( ',', $columns );
 		}
 
@@ -187,7 +172,13 @@ class Beyond_Wpdb_Settings_page {
 			$column = $columns[$index];
 
 			if ( $column )  {
-				$table_name = esc_sql( constant( beyond_wpdb_get_define_table_name( $type ) ) );
+				$table_name = $this->get_json_table_name( $type );
+
+				// If $column name already exists, continue
+				if ( in_array( $column, $this->columns[$table_name] ) ) {
+					continue;
+				}
+
 				$virtual_column = 'virtual_' . $column;
 				$key = '$.' . $column;
 
@@ -205,6 +196,29 @@ class Beyond_Wpdb_Settings_page {
 	}
 
 	/**
+	 * @param $input_columns
+	 * @param $type
+	 * delete virtual columns
+	 * @return mixed
+	 */
+	public function delete_virtual_column($input_columns, $type) {
+		global $wpdb;
+		$table_name = $this->get_json_table_name( $type );
+		$exist_columns = $this->columns[$table_name];
+
+		if ( count( $exist_columns ) > 0 ) {
+			foreach ( $exist_columns as $column ) {
+				if ( ! in_array( $column, $input_columns ) ) {
+					$sql = "ALTER TABLE {$table_name} DROP COLUMN {$column}";
+					$wpdb->query( $sql );
+				}
+			}
+		}
+
+		return $input_columns;
+	}
+
+	/**
 	 * @param $input
 	 *
 	 * @return string
@@ -214,23 +228,8 @@ class Beyond_Wpdb_Settings_page {
 		return sanitize_text_field( $input );
 	}
 
-	/**
-	 * get specified table columns
-	 *
-	 * @param $type
-	 * @return string
-	 */
-	public function get_specified_table_columns( $type )
-	{
-		$table_name = esc_sql( constant( beyond_wpdb_get_define_table_name( $type ) ) );
-		if ( array_key_exists( $table_name, $this->columns ) ) {
-			if ( count( $this->columns[$table_name] ) > 0 ) {
-				$column = implode( ',', $this->columns[$table_name] );
-				$table_name .= "<br />" . "<p>$column</p>";
-			}
-		}
-
-		return $table_name;
+	public function get_json_table_name( $type ) {
+		return esc_sql( constant( beyond_wpdb_get_define_table_name( $type ) ) );
 	}
 
 	/**
@@ -262,7 +261,11 @@ class Beyond_Wpdb_Settings_page {
 	 */
 	public function print_postmeta_json_field()
 	{
-		print '<textarea rows="3" cols="40" id="postmeta_json" name="beyond_wpdb_virtual_column_name[postmeta_json]"></textarea>';
+		$value = implode( PHP_EOL, $this->columns[$this->get_json_table_name( 'post' )] );
+		printf(
+			'<textarea rows="3" cols="40" id="postmeta_json" name="beyond_wpdb_virtual_column_name[postmeta_json]">%s</textarea>',
+			$value
+		);
 	}
 
 	/**
@@ -270,7 +273,11 @@ class Beyond_Wpdb_Settings_page {
 	 */
 	public function print_usermeta_json_field()
 	{
-		print '<textarea rows="3" cols="40" id="usermeta_json" name="beyond_wpdb_virtual_column_name[usermeta_json]"></textarea>';
+		$value = implode( PHP_EOL, $this->columns[$this->get_json_table_name( 'user' )] );
+		printf(
+			'<textarea rows="3" cols="40" id="usermeta_json" name="beyond_wpdb_virtual_column_name[usermeta_json]">%s</textarea>',
+			$value
+		);
 	}
 
 	/**
@@ -278,7 +285,11 @@ class Beyond_Wpdb_Settings_page {
 	 */
 	public function print_commentmeta_json_field()
 	{
-		print '<textarea rows="3" cols="40" id="commentmeta_json" name="beyond_wpdb_virtual_column_name[commentmeta_json]"></textarea>';
+		$value = implode( PHP_EOL, $this->columns[$this->get_json_table_name( 'comment' )] );
+		printf(
+			'<textarea rows="3" cols="40" id="commentmeta_json" name="beyond_wpdb_virtual_column_name[commentmeta_json]">%s</textarea>',
+			$value
+		);
 	}
 }
 
