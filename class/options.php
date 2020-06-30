@@ -26,33 +26,31 @@ class Beyond_Wpdb_Settings_page {
 			'Beyond WPDB',
 			'manage_options',
 			'',
-			array( $this, 'create_admin_page' )
+			array( $this, 'create_beyond_wpdb_settings_page' )
 		);
 	}
 
 	/**
-	 *
+	 * create beyond wpdb settings page
 	 */
-	public function create_admin_page()
+	public function create_beyond_wpdb_settings_page()
 	{
 ?>
-		<div class='beyond-wpdb-settings'>
+		<div class='beyond-wpdb-settings-wrap'>
 			<!-- title -->
-			<h1>Beyond WPDB Settings</h1>
-
+			<h1 style="margin-bottom: 30px;">Beyond WPDB Settings</h1>
+			<!-- form -->
 			<form action='options.php' method='post'>
 				<!-- global settings(suppress filters) -->
-				<section>
+				<div>
 					<?php settings_fields( 'beyond_wpdb_suppress_filters_group' ); ?>
-					<?php do_settings_sections( 'suppress_filters' ); ?>
-				</section>
-
+					<?php do_settings_sections( 'suppress_filters_section' ); ?>
+				</div>
 				<!-- Virtual Column Settings -->
-				<section>
+				<div>
 					<?php settings_fields( 'beyond_wpdb_virtual_column_group' ); ?>
-					<?php do_settings_sections( '' ); ?>
-				</section>
-
+					<?php do_settings_sections( 'virtual_columns_section' ); ?>
+				</div>
 				<!-- Submit Button -->
 				<?php submit_button(); ?>
 			</form>
@@ -65,7 +63,7 @@ class Beyond_Wpdb_Settings_page {
 	 */
 	public function page_init()
 	{
-		//suppress filters
+		// suppress filters setting
 		register_setting(
 			'beyond_wpdb_suppress_filters_group',
 			'beyond_wpdb_suppress_filters_name',
@@ -76,18 +74,18 @@ class Beyond_Wpdb_Settings_page {
 			'setting_section_suppress_filters',
 			'<h2>Global Settings</h2>',
 			array(),
-			'suppress_filters'
+			'suppress_filters_section'
 		);
 
 		add_settings_field(
 			'suppress_filters',
 			"Ignore suppress_filters",
-			array( $this, 'suppress_filters_callback' ),
-			'suppress_filters',
+			array( $this, 'print_suppress_filters_section' ),
+			'suppress_filters_section',
 			'setting_section_suppress_filters'
 		);
 
-		// virtual columns
+		// virtual columns setting
 		register_setting(
 			'beyond_wpdb_virtual_column_group',
 			'beyond_wpdb_virtual_column_name',
@@ -98,36 +96,33 @@ class Beyond_Wpdb_Settings_page {
 			'setting_section_id',
 			'<h2>Virtual Column Settings</h2>',
 			array( $this, 'print_section_info' ),
-			''
+			'virtual_columns_section'
 		);
 
-		// postmeta_json_field
 		$title = $this->get_specified_table_columns( 'post' );
 		add_settings_field(
-			'postmeta_json',
-			"$title",
-			array( $this, 'postmeta_json_callback' ),
-			'',
+			'postmeta_json', // id
+			"$title", // title
+			array( $this, 'print_postmeta_json_field' ), // callback
+			'virtual_columns_section', // section id
 			'setting_section_id'
 		);
 
-		// usermeta_json_field
 		$title = $this->get_specified_table_columns( 'user' );
 		add_settings_field(
 			'usermeta_json',
 			"$title",
-			array( $this, 'usermeta_json_callback' ),
-			'',
+			array( $this, 'print_usermeta_json_field' ),
+			'virtual_columns_section',
 			'setting_section_id'
 		);
 
-		// commentmeta_json_field
 		$title = $this->get_specified_table_columns( 'comment' );
 		add_settings_field(
 			'commentmeta_json',
 			"$title",
-			array( $this, 'commentmeta_json_callback' ),
-			'',
+			array( $this, 'print_commentmeta_json_field' ),
+			'virtual_columns_section',
 			'setting_section_id'
 		);
 	}
@@ -195,7 +190,13 @@ class Beyond_Wpdb_Settings_page {
 				$table_name = esc_sql( constant( beyond_wpdb_get_define_table_name( $type ) ) );
 				$virtual_column = 'virtual_' . $column;
 				$key = '$.' . $column;
+
+				// create virtual column
 				$sql = "ALTER TABLE {$table_name} ADD {$virtual_column} VARCHAR(255) GENERATED ALWAYS AS ( JSON_UNQUOTE( JSON_EXTRACT( json, '$key' ) ) )";
+				$wpdb->query( $sql );
+
+				// create index
+				$sql = "ALTER TABLE {$table_name} ADD INDEX ({$virtual_column})";
 				$wpdb->query( $sql );
 			}
 		}
@@ -233,15 +234,18 @@ class Beyond_Wpdb_Settings_page {
 	}
 
 	/**
-	 * Print suppress_filters section text
+	 * Print suppress_filters section
 	 */
-	public function suppress_filters_callback()
+	public function print_suppress_filters_section()
 	{
 		print '
 		<input type="radio" id="suppress_filters_yes" name="beyond_wpdb_suppress_filters_name[suppress_filters]" checked>
-		<label for="suppress_filters_yes">YES</label>
+		<label for="suppress_filters_yes">YES</label><br>
+		<br>
 		<input type="radio" id="suppress_filters_no" name="beyond_wpdb_suppress_filters_name[suppress_filters]">
-		<label for="suppress_filters_no">NO</label>
+		<label for="suppress_filters_no">NO</label><br>
+		<br>
+		<p>Whether to ignore suppess_filters setting or not</p>
 		';
 	}
 
@@ -254,27 +258,27 @@ class Beyond_Wpdb_Settings_page {
 	}
 
 	/**
-	 * Get the settings option array and print one of its values
+	 * print postmeta json field
 	 */
-	public function postmeta_json_callback()
+	public function print_postmeta_json_field()
 	{
-		print '<textarea id="postmeta_json" name="beyond_wpdb_virtual_column_name[postmeta_json]"></textarea>';
+		print '<textarea rows="3" cols="40" id="postmeta_json" name="beyond_wpdb_virtual_column_name[postmeta_json]"></textarea>';
 	}
 
 	/**
-	 * Get the settings option array and print one of its values
+	 * print usermeta json field
 	 */
-	public function usermeta_json_callback()
+	public function print_usermeta_json_field()
 	{
-		print '<textarea id="usermeta_json" name="beyond_wpdb_virtual_column_name[usermeta_json]"></textarea>';
+		print '<textarea rows="3" cols="40" id="usermeta_json" name="beyond_wpdb_virtual_column_name[usermeta_json]"></textarea>';
 	}
 
 	/**
-	 * Get the settings option array and print one of its values
+	 * print commentmeta json field
 	 */
-	public function commentmeta_json_callback()
+	public function print_commentmeta_json_field()
 	{
-		print '<textarea id="commentmeta_json" name="beyond_wpdb_virtual_column_name[commentmeta_json]"></textarea>';
+		print '<textarea rows="3" cols="40" id="commentmeta_json" name="beyond_wpdb_virtual_column_name[commentmeta_json]"></textarea>';
 	}
 }
 

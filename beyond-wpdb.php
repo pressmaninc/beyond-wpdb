@@ -3,7 +3,7 @@
 Plugin Name: Beyond Wpdb
 Plugin URI:
 Description: Create a new table and register the meta data in a single row of JSON columns.Registration is done by mysql's trigger function.The data in WordPress is not affected.Convert sql statement, when searching for meta data.
-Version: 0.5.0
+Version: 1.0.0
 Author: PRESSMAN
 Author URI: https://www.pressman.ne.jp/
 License: GPLv2 or later
