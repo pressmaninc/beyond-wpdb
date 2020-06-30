@@ -175,7 +175,11 @@ class Beyond_Wpdb_Settings_page {
 				$table_name = $this->get_json_table_name( $type );
 
 				// If $column name already exists, continue
-				if ( in_array( $column, $this->columns[$table_name] ) ) {
+				$exist_columns = $this->columns[$table_name];
+				foreach ( $exist_columns as $index => $value ) {
+					$exist_columns[$index] = str_replace( 'virtual_', '', $value );
+				}
+				if ( in_array( str_replace( 'virtual_', '', $column ), $exist_columns ) ) {
 					continue;
 				}
 
@@ -205,13 +209,19 @@ class Beyond_Wpdb_Settings_page {
 		global $wpdb;
 		$table_name = $this->get_json_table_name( $type );
 		$exist_columns = $this->columns[$table_name];
-
-		if ( count( $exist_columns ) > 0 ) {
-			foreach ( $exist_columns as $column ) {
-				if ( ! in_array( $column, $input_columns ) ) {
-					$sql = "ALTER TABLE {$table_name} DROP COLUMN {$column}";
-					$wpdb->query( $sql );
-				}
+		// remove virtual_ from the elements of $exist_columns
+		foreach ( $exist_columns as $index => $value ) {
+			$exist_columns[$index] = str_replace( 'virtual_', '', $value );
+		}
+		// remove virtual_ from the elements of $input_columns
+		foreach ( $input_columns as $index => $value ) {
+			$input_columns[$index] = str_replace( 'virtual_', '', $value );
+		}
+		// delete
+		foreach ( $exist_columns as $column ) {
+			if ( ! in_array( $column, $input_columns ) ) {
+				$sql = "ALTER TABLE {$table_name} DROP COLUMN virtual_{$column}";
+				$wpdb->query( $sql );
 			}
 		}
 
