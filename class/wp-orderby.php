@@ -54,7 +54,12 @@ class Beyond_Wpdb_Orderby {
 					}
 
 					if ( in_array( $clause_key, $_orderby ) ) {
-						$orderby[$key] = "CAST(JSON_EXTRACT($alias.json, '$.{$clause['key']}') AS {$clause['cast']}) $order";
+						$virtual_column_exists = $this->virtual_column_exists( $type, $clause['key'] );
+						if ( $virtual_column_exists ) {
+							$orderby[$key] = "CAST($alias.virtual_{$clause['key']} AS {$clause['cast']}) $order";
+						} else {
+							$orderby[$key] = "CAST(JSON_EXTRACT($alias.json, '$.{$clause['key']}') AS {$clause['cast']}) $order";
+						}
 					}
 
 				} elseif ( strpos( $val, 'meta_value' ) ) {
@@ -65,10 +70,20 @@ class Beyond_Wpdb_Orderby {
 						}
 					}
 
-					if ( ! empty( $clause['type'] ) ) {
-						$orderby[$key] = "CAST(JSON_EXTRACT($alias.json, '$.{$clause['key']}') AS {$clause['cast']}) $order";
+					$virtual_column_exists = $this->virtual_column_exists( $type, $clause['key'] );
+
+					if ( $virtual_column_exists ) {
+						if ( ! empty( $clause['type'] ) ) {
+							$orderby[$key] = "CAST($alias.virtual_{$clause['key']} AS {$clause['cast']}) $order";
+						} else {
+							$orderby[$key] = "$alias.virtual_{$clause['key']} $order";
+						}
 					} else {
-						$orderby[$key] = "JSON_EXTRACT($alias.json, '$.{$clause['key']}') $order";
+						if ( ! empty( $clause['type'] ) ) {
+							$orderby[$key] = "CAST(JSON_EXTRACT($alias.json, '$.{$clause['key']}') AS {$clause['cast']}) $order";
+						} else {
+							$orderby[$key] = "JSON_EXTRACT($alias.json, '$.{$clause['key']}') $order";
+						}
 					}
 				}
 
@@ -97,6 +112,24 @@ class Beyond_Wpdb_Orderby {
 		//　Convert only if it is joined with the json table and an orderby clause is specified.
 		return $beyond_wpdb_meta_query->check( $query->meta_query->queries ) && ( isset( $q['orderby'] ) && $q['orderby'] !== '' );
 
+	}
+
+	/**
+	 * @param $type
+	 * @param $key
+	 *
+	 * @return bool
+	 */
+	protected function virtual_column_exists( $type, $key ) {
+		global $wpdb;
+		$table_name = esc_sql( constant( beyond_wpdb_get_define_table_name( $type ) ) );
+		$result = $wpdb->get_results( "show columns from {$table_name} like '%virtual_%'" );
+		$virtual_columns = array();
+		foreach ( $result as $val ) {
+			array_push( $virtual_columns, str_replace( 'virtual_', '', $val->Field ) );
+		}
+
+		return in_array( $key, $virtual_columns );
 	}
 }
 

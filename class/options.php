@@ -48,11 +48,21 @@ class Beyond_Wpdb_Settings_page {
 					<?php settings_fields( 'beyond_wpdb_suppress_filters_group' ); ?>
 					<?php do_settings_sections( 'suppress_filters_section' ); ?>
 				</div>
+				<!-- Group Concat -->
+				<div>
+					<?php settings_fields( 'beyond_wpdb_croup_concat_group' ); ?>
+					<?php do_settings_sections( 'croup_concat_section' ); ?>
+				</div>
+				<div>
+					<?php settings_fields( 'beyond_wpdb_data_init_group' ); ?>
+					<?php do_settings_sections( 'data_init_section' ); ?>
+				</div>
 				<!-- Virtual Column Settings -->
 				<div>
 					<?php settings_fields( 'beyond_wpdb_virtual_column_group' ); ?>
 					<?php do_settings_sections( 'virtual_columns_section' ); ?>
 				</div>
+
 				<!-- Submit Button -->
 				<?php submit_button(); ?>
 			</form>
@@ -124,6 +134,50 @@ class Beyond_Wpdb_Settings_page {
 			'virtual_columns_section', // section id
 			'setting_section_id'
 		);
+
+		// group concat
+		register_setting(
+			'beyond_wpdb_croup_concat_group',
+			'',
+			'sanitize_text_field'
+		);
+
+		add_settings_section(
+			'setting_section_croup_concat',
+			'<h2>Group Concat</h2>',
+			array(),
+			'croup_concat_section'
+		);
+
+		add_settings_field(
+			'',
+			"group_concat_max_len",
+			array( $this, 'print_croup_concat_field' ),
+			'croup_concat_section',
+			'setting_section_croup_concat'
+		);
+
+		// data init
+		register_setting(
+			'beyond_wpdb_data_init_group',
+			'beyond_wpdb_data_init_name',
+			array( $this, 'data_init' )
+		);
+
+		add_settings_section(
+			'setting_section_data_init',
+			'<h2>Data Init</h2>',
+			array(),
+			'data_init_section'
+		);
+
+		add_settings_field(
+			'data_init',
+			"Data Init",
+			array( $this, 'print_data_init_field' ),
+			'data_init_section',
+			'setting_section_data_init'
+		);
 	}
 
 	/**
@@ -156,6 +210,15 @@ class Beyond_Wpdb_Settings_page {
 		}
 
 		return $new_input;
+	}
+
+	public function data_init( $input )
+	{
+		if ( isset( $input['data_init'] ) && $input['data_init'] === '1' ) {
+			$beyond_wpdb_sql = new Beyond_Wpdb_Sql();
+			$beyond_wpdb_sql->data_init();
+		}
+		return $input;
 	}
 
 	/**
@@ -191,7 +254,7 @@ class Beyond_Wpdb_Settings_page {
 				$wpdb->query( $sql );
 
 				// create index
-				$sql = "ALTER TABLE {$table_name} ADD INDEX ({$virtual_column})";
+				$sql = "ALTER TABLE {$table_name} ADD INDEX {$column}_index({$virtual_column})";
 				$wpdb->query( $sql );
 			}
 		}
@@ -300,6 +363,27 @@ class Beyond_Wpdb_Settings_page {
 			'<textarea rows="3" cols="40" id="commentmeta_json" name="beyond_wpdb_virtual_column_name[commentmeta_json]">%s</textarea>',
 			$value
 		);
+	}
+
+	/**
+	 * print commentmeta croup_concat field
+	 */
+	public function print_croup_concat_field()
+	{
+		global $wpdb;
+		$group_concat_max_len = $wpdb->get_results( "show variables like 'group_concat_max_len'" );
+		printf(
+			'<p>%s</p>',
+			$group_concat_max_len[0]->Value
+		);
+	}
+
+	/**
+	 *
+	 */
+	public function print_data_init_field()
+	{
+		print '<input type="checkbox" id="data_init" name="beyond_wpdb_data_init_name[data_init]" value="1">';
 	}
 }
 

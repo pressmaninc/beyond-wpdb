@@ -21,6 +21,8 @@ class Beyond_Wpdb_Meta_Query_Test extends WP_UnitTestCase {
 	{
 		parent::tearDown();
 
+		// remove virtual columns for test
+		$this->delete_virtual_columns();
 		$register_hook = new Beyond_Wpdb_Register_Hook();
 		$register_hook::deactivation();
 	}
@@ -679,6 +681,252 @@ class Beyond_Wpdb_Meta_Query_Test extends WP_UnitTestCase {
 		$this->assertCount( 1, $the_query->get_comments() );
 	}
 
+	// ---------------↑ without virtual columns ↑---------------
+	// ---------------↓ with virtual columns    ↓---------------
+
+	/**
+	 * test get_meta_sql for virtual columns with equals - Wp_Query
+	 */
+	public function test_get_meta_sql_for_virtual_columns_with_equals()
+	{
+		$this->delete_postmeta_json_table_data( 'post' );
+
+		// create a post
+		$post_id = $this->factory->post->create();
+		add_post_meta( $post_id, 'country', 'japan', false );
+		add_post_meta( $post_id, 'region', 'tokyo', false );
+
+		// create virtual columns
+		$beyond_wpdb_settings_page = new Beyond_Wpdb_Settings_page();
+		$input = array();
+		$input_virtual_columns = 'country' . PHP_EOL . 'region';
+		$input['postmeta_json'] = $input_virtual_columns;
+		$beyond_wpdb_settings_page->create_virtual_column( $input );
+
+		$args = array(
+			'meta_query' => array(
+				array(
+					'key' => 'country',
+					'value' => 'japan',
+					'compare' => '='
+				),
+				array(
+					'key' => 'region',
+					'value' => 'tokyo',
+					'compare' => '='
+				),
+			)
+		);
+
+		$the_query = new WP_Query( $args );
+		$this->assertCount( 1, $the_query->get_posts() );
+	}
+
+	/**
+	 * test get_meta_sql for virtual columns with IN OR NOT IN - Wp_Query
+	 */
+	public function test_get_meta_sql_for_virtual_columns_with_in_or_not_in()
+	{
+		$this->delete_postmeta_json_table_data( 'post' );
+
+		// create a post
+		$post_id = $this->factory->post->create();
+		add_post_meta( $post_id, 'country', 'japan', false );
+		add_post_meta( $post_id, 'region', 'tokyo', false );
+
+		// create virtual columns
+		$beyond_wpdb_settings_page = new Beyond_Wpdb_Settings_page();
+		$input = array();
+		$input_virtual_columns = 'country' . PHP_EOL . 'region';
+		$input['postmeta_json'] = $input_virtual_columns;
+		$beyond_wpdb_settings_page->create_virtual_column( $input );
+
+		$args = array(
+			'meta_query' => array(
+				array(
+					'key' => 'country',
+					'value' => array(
+						'japan',
+						'USA',
+						'china'
+					),
+					'compare' => 'IN'
+				),
+				array(
+					'key' => 'region',
+					'value' => array(
+						'osaka',
+						'kyoto',
+						'hokkaido'
+					),
+					'compare' => 'NOT IN'
+				),
+			)
+		);
+
+		$the_query = new WP_Query( $args );
+		$this->assertCount( 1, $the_query->get_posts() );
+
+	}
+
+	/**
+	 * test get_meta_sql for virtual columns with BETWEEN OR NOT BETWEEN - Wp_Query
+	 */
+	public function test_get_meta_sql_for_virtual_columns_with_between_or_not_between()
+	{
+		$this->delete_postmeta_json_table_data( 'post' );
+
+		// create a post
+		$post_id = $this->factory->post->create();
+		add_post_meta( $post_id, 'height', 180, false );
+		add_post_meta( $post_id, 'weight', 86, false );
+
+		// create virtual columns
+		$beyond_wpdb_settings_page = new Beyond_Wpdb_Settings_page();
+		$input = array();
+		$input_virtual_columns = 'height' . PHP_EOL . 'weight';
+		$input['postmeta_json'] = $input_virtual_columns;
+		$beyond_wpdb_settings_page->create_virtual_column( $input );
+
+		$args = array(
+			'meta_query' => array(
+				array(
+					'key' => 'height',
+					'value' => array(
+						'150',
+						'190',
+					),
+					'compare' => 'BETWEEN',
+					'type' => 'NUMERIC'
+				),
+				array(
+					'key' => 'weight',
+					'value' => array(
+						'90',
+						'120',
+					),
+					'compare' => 'NOT BETWEEN',
+					'type' => 'NUMERIC'
+				),
+			)
+		);
+
+		$the_query = new WP_Query( $args );
+		$this->assertCount( 1, $the_query->get_posts() );
+	}
+
+	/**
+	 * test get_meta_sql for virtual columns with LIKE OR NOT LIKE - Wp_Query
+	 */
+	public function test_get_meta_sql_for_virtual_columns_with_like_or_not_like()
+	{
+		$this->delete_postmeta_json_table_data( 'post' );
+
+		// create a post
+		$post_id = $this->factory->post->create();
+		add_post_meta( $post_id, 'country', 'japan', false );
+		add_post_meta( $post_id, 'region', 'tokyo', false );
+
+		// create virtual columns
+		$beyond_wpdb_settings_page = new Beyond_Wpdb_Settings_page();
+		$input = array();
+		$input_virtual_columns = 'country' . PHP_EOL . 'region';
+		$input['postmeta_json'] = $input_virtual_columns;
+		$beyond_wpdb_settings_page->create_virtual_column( $input );
+
+		$args = array(
+			'meta_query' => array(
+				array(
+					'key' => 'country',
+					'value' => 'ja',
+					'compare' => 'LIKE'
+				),
+				array(
+					'key' => 'region',
+					'value' => 'osa',
+					'compare' => 'NOT LIKE'
+				),
+			)
+		);
+
+		$the_query = new WP_Query( $args );
+		$this->assertCount( 1, $the_query->get_posts() );
+	}
+
+	/**
+	 * test get_meta_sql for virtual columns - Wp_User_Query
+	 */
+	public function test_get_meta_sql_for_virtual_columns_wp_user_query()
+	{
+		$this->delete_postmeta_json_table_data( 'user' );
+
+		// create a user
+		$user_id = $this->factory->user->create();
+		add_user_meta( $user_id, 'language', 'japanese' );
+		add_user_meta( $user_id, 'hobby', 'walking' );
+
+		// create virtual columns
+		$beyond_wpdb_settings_page = new Beyond_Wpdb_Settings_page();
+		$input = array();
+		$input_virtual_columns = 'language' . PHP_EOL . 'hobby';
+		$input['usermeta_json'] = $input_virtual_columns;
+		$beyond_wpdb_settings_page->create_virtual_column( $input );
+
+		$args = array(
+			'meta_query' => array(
+				array(
+					'key' => 'language',
+					'value' => 'japanese',
+					'compare' => '='
+				),
+				array(
+					'key' => 'hobby',
+					'value' => 'walking',
+					'compare' => '='
+				),
+			)
+		);
+
+		$the_query = new WP_User_Query( $args );
+		$this->assertCount( 1, $the_query->get_results() );
+	}
+
+	/**
+	 * test get_meta_sql for virtual columns - Wp_Comment_Query
+	 */
+	public function test_get_meta_sql_for_virtual_columns_wp_comment_query()
+	{
+		$this->delete_postmeta_json_table_data( 'comment' );
+
+		// create a post
+		$post_id = $this->factory->post->create();
+		add_post_meta( $post_id, 'language', 'japanese' );
+
+		// create a comment
+		$comment_id = $this->factory->comment->create( array( 'post_id' => $post_id ) );
+		add_comment_meta( $comment_id, 'rating', '5' );
+
+		// create virtual columns
+		$beyond_wpdb_settings_page = new Beyond_Wpdb_Settings_page();
+		$input = array();
+		$input_virtual_columns = 'rating';
+		$input['commentmeta_json'] = $input_virtual_columns;
+		$beyond_wpdb_settings_page->create_virtual_column( $input );
+
+		$args = array(
+			'meta_query' => array(
+				array(
+					'key' => 'rating',
+					'value' => array( 2, 5 ),
+					'compare' => 'BETWEEN'
+				)
+			)
+		);
+
+		$the_query = new WP_Comment_Query( $args );
+		$this->assertCount( 1, $the_query->get_comments() );
+	}
+
 	/**
 	 * @param $method
 	 *
@@ -701,5 +949,28 @@ class Beyond_Wpdb_Meta_Query_Test extends WP_UnitTestCase {
 	protected function remove_spaces( $where )
 	{
 		return preg_replace( '/\s(?=\s)/', '', preg_replace( '/[\n\r\t]/', ' ', trim( $where ) ) );
+	}
+
+	/**
+	 * delete virtual columns from all meta_json tables for test
+	 */
+	protected function delete_virtual_columns()
+	{
+		$beyond_wpdb_settings_page = new Beyond_Wpdb_Settings_page();
+		$input = array();
+		$input['postmeta_json'] = '';
+		$input['usermeta_json'] = '';
+		$input['commentmeta_json'] = '';
+		$beyond_wpdb_settings_page->create_virtual_column( $input );
+	}
+
+	/**
+	 * delete postmeta json table data for virtual column test
+	 */
+	protected function delete_postmeta_json_table_data( $type )
+	{
+		global $wpdb;
+		$table_name = esc_sql( constant( beyond_wpdb_get_define_table_name( $type ) ) );
+		$wpdb->query( "delete from {$table_name}" );
 	}
 }

@@ -19,6 +19,7 @@ class Beyond_Wpdb_OrderBy_Test extends WP_UnitTestCase {
 	{
 		parent::tearDown();
 
+		$this->delete_virtual_columns();
 		$register_hook = new Beyond_Wpdb_Register_Hook();
 		$register_hook::deactivation();
 	}
@@ -47,6 +48,7 @@ class Beyond_Wpdb_OrderBy_Test extends WP_UnitTestCase {
 		);
 
 		$the_query = new WP_Query( $args );
+		// print_r( $the_query->request );
 
 		$pos = strpos( $the_query->request, 'ORDER' );
 		$result = substr( $the_query->request, $pos );
@@ -248,6 +250,101 @@ class Beyond_Wpdb_OrderBy_Test extends WP_UnitTestCase {
 		$the_query = new WP_User_Query( $args );
 		$pos = strpos($the_query->request, 'ORDER');
 		$this->assertEquals( $expected_value, trim( substr( $the_query->request, $pos ) ) );
+	}
+
+	/**
+	 * Wp_Query orderby test for virtual column
+	 */
+	public function test_check_orderby_clause_converted_for_virtual_column() {
+		$alias = esc_sql( constant( beyond_wpdb_get_define_table_name( 'post' ) ) );
+		$expected_value = "ORDER BY $alias.virtual_region DESC";
+
+		$post_id = $this->factory->post->create();
+		add_post_meta( $post_id, 'region', 'tokyo' );
+
+		$args = array(
+			'orderby' => 'meta_value',
+			'meta_key'  => 'region',
+			'meta_value' => array(
+				'tokyo',
+				'osaka',
+				'kyoto'
+			),
+			'meta_compare' => 'IN'
+		);
+
+		$beyond_wpdb_settings_page = new Beyond_Wpdb_Settings_page();
+		$input = array();
+		$input['postmeta_json'] = 'region';
+		$beyond_wpdb_settings_page->create_virtual_column( $input );
+
+		$the_query = new WP_Query( $args );
+
+		$pos = strpos( $the_query->request, 'ORDER' );
+		$result = substr( $the_query->request, $pos );
+		$result = trim( strstr( $result, 'LIMIT', true ) );
+		$this->assertEquals( $expected_value, $result );
+	}
+
+	/**
+	 * Wp_Query orderby test
+	 */
+	public function test_check_complex_orderby_clause_converted_for_virtual_column() {
+		$alias = esc_sql( constant( beyond_wpdb_get_define_table_name( 'post' ) ) );
+		$expected_value = "ORDER BY CAST($alias.virtual_city AS CHAR) ASC, wptests_postmeta_json.virtual_state DESC";
+
+		$post_id = $this->factory->post->create();
+		add_post_meta( $post_id, 'state', 'Wisconsin' );
+		add_post_meta( $post_id, 'city', 'tokyo' );
+
+		$args = array(
+			'meta_query' => array(
+				'relation' => 'AND',
+				'state_clause' => array(
+					'key' => 'state',
+					'value' => 'Wisconsin',
+					'compare' => '='
+				),
+				'city_clause' => array(
+					'key' => 'city',
+					'value' => array(
+						'tokyo',
+						'osaka'
+					),
+					'compare' => 'IN',
+				),
+			),
+			'orderby' => array(
+				'city_clause' => 'ASC',
+				'state_clause' => 'DESC',
+			)
+		);
+
+		$beyond_wpdb_settings_page = new Beyond_Wpdb_Settings_page();
+		$input = array();
+		$input['postmeta_json'] = 'state' . PHP_EOL . 'city';
+		$beyond_wpdb_settings_page->create_virtual_column( $input );
+
+		$the_query = new WP_Query( $args );
+		print_r( $the_query->request );
+
+		$pos = strpos( $the_query->request, 'ORDER' );
+		$result = substr( $the_query->request, $pos );
+		$result = trim( strstr( $result, 'LIMIT', true ) );
+		$this->assertEquals( $expected_value, $result );
+	}
+
+	/**
+	 * delete virtual columns from all meta_json tables for test
+	 */
+	protected function delete_virtual_columns()
+	{
+		$beyond_wpdb_settings_page = new Beyond_Wpdb_Settings_page();
+		$input = array();
+		$input['postmeta_json'] = '';
+		$input['usermeta_json'] = '';
+		$input['commentmeta_json'] = '';
+		$beyond_wpdb_settings_page->create_virtual_column( $input );
 	}
 
 }
