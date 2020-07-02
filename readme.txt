@@ -1,7 +1,7 @@
 === Beyond Wpdb ===
 Contributors: pressmaninc,kazunao,hiroshisekiguchi,hommakoharu,pmhirotaka
 Tags: pressman,pressmaninc,json,meta_query,wpdb,database,fast,speed,speed up,sql,replace sql
-Stable tag: 1.0.0
+Stable tag: 1.1
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 Requires Wordpress: 5.4
@@ -12,11 +12,14 @@ Tested up to: 5.4
 
 Are you having trouble with slow queries due to WordPress table structure?
 This plugin helps your site speed up using JSON type columns, one of the features of MySQL, and prevents complex queries while maintaining the flexibility of WordPress development.
+You can also add a virtual column in the configuration page and index the virtual column to make it even faster.You can also add a virtual column in the configuration page and index the virtual column to make it even faster.
 
 == Features ==
 If a large amount of meta data is given to 1 post/user/comment and a complex meta_query is specified, a large number of inner joins will occur, which will slow down the execution of the query.
 The effect will be noticeable especially when the number of records is large.
 This plugin avoids complex joins and prevents slowdowns by storing all the meta data for 1 post/user/comment in a JSON type column in a custom meta table.
+The dedicated configuration page includes a check for group_concat_max_len, a function to measure consistency of meta table and its custom meta table,
+and the ability to add virtual columns, add a The ability to create indexes. Indexes on virtual columns to make it even faster.
 
 == Actual Behavior ==
 * Converts the SQL that WordPress auto-generates when using the default APIs of get_posts, Wp_Query, and etc. into a simple SQL that combines the posts/users/comment table with its own meta table.
@@ -47,7 +50,7 @@ This plugin avoids complex joins and prevents slowdowns by storing all the meta 
 <pre>{ "state": "Wisconsin", "city": "Winter" } </pre>
 
 == Results of Speed Measurement ==
-ex ) Create 100 posts and 50 meta data for each post, and combine them 9 times.
+ex1 ) Create 100 posts and 50 meta data for each post, and combine them 9 times.
 
 * postmeta_json
     * Equal:0.04
@@ -65,6 +68,21 @@ ex ) Create 100 posts and 50 meta data for each post, and combine them 9 times.
     * NOT LIKE:0.66
     * BETWEEN:0.63
     * NOT BETWEEN:0.63
+
+ex1 ) 1000 posts, 1 meta(category) per post.If you add a virtual column and put an index in Category, or if you add a virtual column and put an index in Category
+* postmeta_json(without virtual column)
+    *Equal:0.02
+    *IN:0.85
+    *NOT IN:0.32
+    *BETWEEN:0.3
+    *NOT BETWEEN:0.03
+
+* postmeta_json(with virtual column)
+    *Equal:0.01
+    *IN:0.06
+    *NOT IN:0.18
+    *BETWEEN:0.15
+    *NOT BETWEEN:0.01
 
 == Installation ==
 1.Download the plugin
