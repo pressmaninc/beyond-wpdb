@@ -24,6 +24,8 @@ class Beyond_Wpdb_Meta_Query {
 
 	public $clauses = array();
 
+	public $type = '';
+
 	/**
 	 * Determine whether a query clause is first-order.
 	 *
@@ -80,6 +82,8 @@ class Beyond_Wpdb_Meta_Query {
 		if ( ! $meta_table ) {
 			return false;
 		};
+
+		$this->type = $type;
 
 		$this->queries = $queries;
 
@@ -231,8 +235,8 @@ class Beyond_Wpdb_Meta_Query {
 		$meta_compare     = isset( $clause['compare'] ) ? $clause['compare'] : '=';
 
 		// check whether the specified key exists in the virtual column name or not
-		$virtual_column_exists = $this->virtual_column_exists( $clause['key'] );
-		$key = $virtual_column_exists ? 'virtual_' . trim( $clause['key'] ) : '$.' . trim( $clause['key'] );
+		$virtual_column_exists = $this->virtual_column_exists( $clause['key'], $this->type );
+		$key = $virtual_column_exists ? trim( $clause['key'] ) : '$.' . trim( $clause['key'] );
 
 		// First build the JOIN clause, if one is required.
 		$join = '';
@@ -292,65 +296,48 @@ class Beyond_Wpdb_Meta_Query {
 			switch ( $meta_compare ) {
 				case 'IN':
 				case 'NOT IN':
-					if ( $virtual_column_exists ) {
-						$meta_compare_string = '(' . substr( str_repeat( ',%s', count( $meta_value ) ), 1 ) . ')';
-						$where = $wpdb->prepare( $meta_compare_string, $meta_value );
-					} else {
-						$meta_compare = $meta_compare === 'IN' ? '=' : '!=';
-						$column = $this->get_column( $meta_type, $key, $alias );
-						$where = '';
-						if ( is_array( $meta_value ) ) {
-							foreach ( $meta_value as $k => $value ) {
+					$meta_compare = $meta_compare === 'IN' ? '=' : '!=';
+					$column = $this->get_column( $meta_type, $key, $alias );
+					$where = '';
+					if ( is_array( $meta_value ) ) {
+						foreach ( $meta_value as $k => $value ) {
 
-								if ( $k === 0 ) {
-									$where .= ' ( ' . $column . ' ' . $meta_compare . ' ' . $wpdb->prepare( '%s', $value ) . ' OR ';
-								} elseif ( $k !== count($meta_value) - 1 ) {
-									$where .= $column . ' ' . $meta_compare . ' ' . $wpdb->prepare( '%s', $value ) . ' OR ';
-								} else {
-									$where .= $column . ' ' . $meta_compare . ' ' . $wpdb->prepare( '%s', $value ) . ' ) ';
-								}
-
+							if ( $k === 0 ) {
+								$where .= ' ( ' . $column . ' ' . $meta_compare . ' ' . $wpdb->prepare( '%s', $value ) . ' OR ';
+							} elseif ( $k !== count($meta_value) - 1 ) {
+								$where .= $column . ' ' . $meta_compare . ' ' . $wpdb->prepare( '%s', $value ) . ' OR ';
+							} else {
+								$where .= $column . ' ' . $meta_compare . ' ' . $wpdb->prepare( '%s', $value ) . ' ) ';
 							}
-						} else {
-							$where = $column . ' ' . $meta_compare . ' ' . $wpdb->prepare( '%s', $meta_value );
+
 						}
+					} else {
+						$where = $column . ' ' . $meta_compare . ' ' . $wpdb->prepare( '%s', $meta_value );
 					}
 					break;
 
 				case 'BETWEEN':
 				case 'NOT BETWEEN':
-					if ( $virtual_column_exists ) {
-						$where = $wpdb->prepare( '%s AND %s', $meta_value[0], $meta_value[1] );
-					} else {
-						$column = $this->get_column( $meta_type, $key, $alias );
-						$metaValue1 = $wpdb->prepare( '%s', $meta_value[0] );
-						$metaValue2 = $wpdb->prepare( '%s', $meta_value[1] );
-						$where = $meta_compare === 'BETWEEN'
-							? "( $metaValue1 <= $column and $column <= $metaValue2 )"
-							: "( $metaValue1 > $column OR $column > $metaValue2 )";
-					}
+					$column = $this->get_column( $meta_type, $key, $alias );
+					$metaValue1 = $wpdb->prepare( '%s', $meta_value[0] );
+					$metaValue2 = $wpdb->prepare( '%s', $meta_value[1] );
+					$where = $meta_compare === 'BETWEEN'
+						? "( $metaValue1 <= $column and $column <= $metaValue2 )"
+						: "( $metaValue1 > $column OR $column > $metaValue2 )";
 					break;
 
 				case 'LIKE':
 				case 'NOT LIKE':
 					$meta_value = '%' . $wpdb->esc_like( $meta_value ) . '%';
-					if ( $virtual_column_exists ) {
-						$where      = $wpdb->prepare( '%s', $meta_value );
-					} else  {
-						$column = $this->get_column( $meta_type, $key, $alias );
-						$where = $column . ' ' . $meta_compare . ' ' .$wpdb->prepare('%s' , $meta_value);
-					}
+					$column = $this->get_column( $meta_type, $key, $alias );
+					$where = $column . ' ' . $meta_compare . ' ' .$wpdb->prepare('%s' , $meta_value);
 					break;
 
 				// EXISTS with a value is interpreted as '='.
 				case 'EXISTS':
 					$meta_compare = '=';
-					if ( $virtual_column_exists ) {
-						$where        = $wpdb->prepare( '%s', $meta_value );
-					} else {
-						$column = $this->get_column( $meta_type, $key, $alias );
-						$where = $column . ' ' . $meta_compare . ' ' .$wpdb->prepare('%s' , $meta_value);
-					}
+					$column = $this->get_column( $meta_type, $key, $alias );
+					$where = $column . ' ' . $meta_compare . ' ' .$wpdb->prepare('%s' , $meta_value);
 					break;
 
 				// 'value' is ignored for NOT EXISTS.
@@ -359,26 +346,14 @@ class Beyond_Wpdb_Meta_Query {
 					break;
 
 				default:
-					if ( $virtual_column_exists ) {
-						$where        = $wpdb->prepare( '%s', $meta_value );
-					} else {
-						$column = $this->get_column( $meta_type, $key, $alias );
-						$where = $column . ' ' . $meta_compare . ' ' .$wpdb->prepare('%s' , $meta_value);
-					}
+					$column = $this->get_column( $meta_type, $key, $alias );
+					$where = $column . ' ' . $meta_compare . ' ' .$wpdb->prepare('%s' , $meta_value);
 					break;
 
 			}
 
-			if ( $virtual_column_exists ) {
-				if ( 'CHAR' === $meta_type ) {
-					$sql_chunks['where'][] = "{$alias}.{$key} {$meta_compare} {$where}";
-				} else {
-					$sql_chunks['where'][] = "CAST({$alias}.{$key} AS {$meta_type}) {$meta_compare} {$where}";
-				}
-			} else {
-				if ( $where ) {
-					$sql_chunks['where'][] = "{$where}";
-				}
+			if ( $where ) {
+				$sql_chunks['where'][] = "{$where}";
 			}
 		}
 
@@ -485,27 +460,42 @@ class Beyond_Wpdb_Meta_Query {
 
 	/**
 	 * @param $key
+	 * @param $type
 	 *
 	 * whether the specified key exists in the virtual column name or not
-	 *
 	 * @return bool
 	 */
-	public function virtual_column_exists( $key ) {
-		global $wpdb;
-		$result = $wpdb->get_results( "show columns from {$this->meta_table} like '%virtual_%'" );
-		$virtual_columns = array();
-		foreach ( $result as $val ) {
-			array_push( $virtual_columns, str_replace( 'virtual_', '', $val->Field ) );
-		}
+	public function virtual_column_exists( $key, $type ) {
+		$beyond_wpdb_column = new Beyond_Wpdb_Column();
+		$beyond_wpdb_column->set_columns();
+		$virtual_columns = $beyond_wpdb_column->get_columns();
 
-		return in_array( $key, $virtual_columns );
+		return in_array( $key, $virtual_columns[$type] );
 	}
 
+	/**
+	 * @param $meta_type
+	 * @param $key
+	 * @param $alias
+	 *
+	 * @return string
+	 */
 	protected function get_column( $meta_type, $key, $alias ) {
 		global $wpdb;
-		return 'CHAR' === $meta_type
-			? $wpdb->prepare( "JSON_UNQUOTE( JSON_EXTRACT($alias.json, %s) )", $key )
-			: $wpdb->prepare( "CAST( JSON_UNQUOTE( JSON_EXTRACT($alias.json, %s) ) as $meta_type )", $key );
+		$virtual_column_exists = $this->virtual_column_exists( $key, $this->type );
+		$column = '';
+
+		if ( $virtual_column_exists ) {
+			$column = 'CHAR' === $meta_type
+				? "$alias.$key"
+				: "CAST({$alias}.{$key} AS {$meta_type})";
+		} else {
+			$column = 'CHAR' === $meta_type
+				? $wpdb->prepare( "JSON_UNQUOTE( JSON_EXTRACT($alias.json, %s) )", $key )
+				: $wpdb->prepare( "CAST( JSON_UNQUOTE( JSON_EXTRACT($alias.json, %s) ) as $meta_type )", $key );
+		}
+
+		return $column;
 	}
 }
 

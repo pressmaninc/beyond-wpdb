@@ -424,6 +424,7 @@ class Beyond_Wpdb_Performance_Test extends WP_UnitTestCase {
 		$this->create_virtual_columns( 'post' );
 		$start = microtime(true);
 		$the_query = new WP_Query( $args );
+		// print_r( $the_query->request );
 		$the_query->get_posts();
 		$end = microtime(true);
 		$with_virtual_column_time = round( ($end - $start), 2 );
@@ -473,51 +474,16 @@ class Beyond_Wpdb_Performance_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * test performance not in for virtual column
-	 */
-	public function test_performance_not_in_for_virtual_column() {
-		$args = array(
-			'posts_per_page' => '2000',
-			'meta_query' => array(
-				array(
-					'key' => 'category',
-					'value' => array( 3000, 4000, 5000, 6000, 7000 ),
-					'compare' => 'NOT IN'
-				)
-			)
-		);
-
-		// without virtual column
-		$start = microtime(true);
-		$the_query = new WP_Query( $args );
-		$the_query->get_posts();
-		$end = microtime(true);
-		$without_virtual_column_time = round( ($end - $start), 2 );
-
-		// with virtual column
-		$this->create_virtual_columns( 'post' );
-		$start = microtime(true);
-		$the_query = new WP_Query( $args );
-		$the_query->get_posts();
-		$end = microtime(true);
-		$with_virtual_column_time = round( ($end - $start), 2 );
-
-		echo "postmeta_json(without virtual column):NOT IN:$without_virtual_column_time" . PHP_EOL;
-		echo "postmeta_json(with virtual column):NOT IN:$with_virtual_column_time" . PHP_EOL;
-
-		$this->assertGreaterThanOrEqual( $with_virtual_column_time, $without_virtual_column_time );
-	}
-
-	/**
 	 * test performance BETWEEN for virtual column
 	 */
 	public function test_performance_between_for_virtual_column() {
+		$this->init_for_virtual_column_test( 'post' );
 		$args = array(
 			'posts_per_page' => '2000',
 			'meta_query' => array(
 				array(
 					'key' => 'category',
-					'value' => array( 0, 2000 ),
+					'value' => array( 0, 9999 ),
 					'compare' => 'BETWEEN'
 				)
 			)
@@ -548,12 +514,13 @@ class Beyond_Wpdb_Performance_Test extends WP_UnitTestCase {
 	 * test performance NOT BETWEEN for virtual column
 	 */
 	public function test_performance_not_between_for_vitual_column() {
+		$this->init_for_virtual_column_test( 'post' );
 		$args = array(
 			'posts_per_page' => '2000',
 			'meta_query' => array(
 				array(
 					'key' => 'category',
-					'value' => array( 3000, 10000 ),
+					'value' => array( 10001, 20000 ),
 					'compare' => 'BETWEEN'
 				)
 			)
@@ -590,7 +557,7 @@ class Beyond_Wpdb_Performance_Test extends WP_UnitTestCase {
 
 		$post_ids = $this->factory->post->create_many( 2000 );
 		foreach ( $post_ids as $post_id ) {
-			$category = rand( 0, 1999 );
+			$category = rand( 0, 9999 );
 			add_post_meta( $post_id, "category", $category );
 			if ( $post_id % 7 === 0 ) {
 				array_push( $categories, $category );
@@ -606,7 +573,7 @@ class Beyond_Wpdb_Performance_Test extends WP_UnitTestCase {
 		$beyond_wpdb_settings_page = new Beyond_Wpdb_Settings_page();
 		$input = array();
 		$input[$type . 'meta_json'] = 'category';
-		$beyond_wpdb_settings_page->create_virtual_column( $input );
+		$beyond_wpdb_settings_page->create_virtual_column_and_index( $input );
 	}
 
 	/**
@@ -619,7 +586,7 @@ class Beyond_Wpdb_Performance_Test extends WP_UnitTestCase {
 		$input['postmeta_json'] = '';
 		$input['usermeta_json'] = '';
 		$input['commentmeta_json'] = '';
-		$beyond_wpdb_settings_page->create_virtual_column( $input );
+		$beyond_wpdb_settings_page->delete_virtual_column( $input );
 	}
 
 }

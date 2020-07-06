@@ -31,7 +31,7 @@ class Beyond_Wpdb_Options_Page_TEST extends WP_UnitTestCase {
 		global $wpdb;
 		$beyond_wpdb_settings_page = new Beyond_Wpdb_Settings_page();
 		$input = array();
-		$expected_array = array( 'virtual_country', 'virtual_region' );
+		$expected_array = array( 'country', 'region' );
 
 		// create a post
 		$post_id = $this->factory->post->create();
@@ -41,11 +41,11 @@ class Beyond_Wpdb_Options_Page_TEST extends WP_UnitTestCase {
 		// create virtual columns
 		$input_virtual_columns = 'country' . PHP_EOL . 'region';
 		$input['postmeta_json'] = $input_virtual_columns;
-		$beyond_wpdb_settings_page->create_virtual_column( $input );
+		$beyond_wpdb_settings_page->create_virtual_column_and_index( $input );
 
 		// get virtual columns
 		$table_name = esc_sql( constant( beyond_wpdb_get_define_table_name( 'post' ) ) );
-		$result = $wpdb->get_results( "show columns from {$table_name} like '%virtual_%'" );
+		$result = $wpdb->get_results( "show columns from {$table_name} where Field not in ('post_id', 'user_id', 'comment_id', 'json')" );
 
 		$result_array = array();
 		foreach ( $result as $value ) {
@@ -67,10 +67,10 @@ class Beyond_Wpdb_Options_Page_TEST extends WP_UnitTestCase {
 
 		// Removing virtual columns created by test_create_virtual_column
 		$input['postmeta_json'] = '';
-		$beyond_wpdb_settings_page->create_virtual_column( $input );
+		$beyond_wpdb_settings_page->delete_virtual_column( $input );
 
 		$table_name = esc_sql( constant( beyond_wpdb_get_define_table_name( 'post' ) ) );
-		$result_array = $wpdb->get_results( "show columns from {$table_name} like '%virtual_%'" );
+		$result_array = $wpdb->get_results( "show columns from {$table_name} where Field not in ('post_id', 'user_id', 'comment_id', 'json')" );
 
 		$this->assertEquals( $expected_array, $result_array );
 	}

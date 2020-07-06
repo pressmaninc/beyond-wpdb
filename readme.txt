@@ -50,7 +50,7 @@ and the ability to add virtual columns, add a The ability to create indexes. Ind
 <pre>{ "state": "Wisconsin", "city": "Winter" } </pre>
 
 == Results of Speed Measurement ==
-ex1 ) Create 100 posts and 50 meta data for each post, and combine them 9 times.
+ex1 ) Create 100 posts and 50 meta data for each post. Combine them 9 times.
 
 * postmeta_json
     * Equal:0.04
@@ -69,20 +69,18 @@ ex1 ) Create 100 posts and 50 meta data for each post, and combine them 9 times.
     * BETWEEN:0.63
     * NOT BETWEEN:0.63
 
-ex1 ) 1000 posts, 1 meta(category) per post.If you add a virtual column and put an index in Category, or if you add a virtual column and put an index in Category
+ex1 ) 10000 posts, 1 meta(category) per post.If you add a virtual column and put an index in Category, or if you add a virtual column and put an index in Category
 * postmeta_json(without virtual column)
-    *Equal:0.02
-    *IN:0.85
-    *NOT IN:0.32
-    *BETWEEN:0.3
-    *NOT BETWEEN:0.03
+    *Equal:0.15
+    *IN:1.92
+    *BETWEEN:0.37
+    *NOT BETWEEN:0.29
 
 * postmeta_json(with virtual column)
-    *Equal:0.01
-    *IN:0.06
-    *NOT IN:0.18
-    *BETWEEN:0.15
-    *NOT BETWEEN:0.01
+    *Equal:0.02
+    *IN:0.35
+    *BETWEEN:0.12
+    *NOT BETWEEN:0.09
 
 == Installation ==
 1.Download the plugin

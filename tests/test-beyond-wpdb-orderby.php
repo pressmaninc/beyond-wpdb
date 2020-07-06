@@ -257,7 +257,7 @@ class Beyond_Wpdb_OrderBy_Test extends WP_UnitTestCase {
 	 */
 	public function test_check_orderby_clause_converted_for_virtual_column() {
 		$alias = esc_sql( constant( beyond_wpdb_get_define_table_name( 'post' ) ) );
-		$expected_value = "ORDER BY $alias.virtual_region DESC";
+		$expected_value = "ORDER BY $alias.region DESC";
 
 		$post_id = $this->factory->post->create();
 		add_post_meta( $post_id, 'region', 'tokyo' );
@@ -291,7 +291,7 @@ class Beyond_Wpdb_OrderBy_Test extends WP_UnitTestCase {
 	 */
 	public function test_check_complex_orderby_clause_converted_for_virtual_column() {
 		$alias = esc_sql( constant( beyond_wpdb_get_define_table_name( 'post' ) ) );
-		$expected_value = "ORDER BY CAST($alias.virtual_city AS CHAR) ASC, wptests_postmeta_json.virtual_state DESC";
+		$expected_value = "ORDER BY CAST($alias.city AS CHAR) ASC, wptests_postmeta_json.state DESC";
 
 		$post_id = $this->factory->post->create();
 		add_post_meta( $post_id, 'state', 'Wisconsin' );

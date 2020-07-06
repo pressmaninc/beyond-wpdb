@@ -701,7 +701,7 @@ class Beyond_Wpdb_Meta_Query_Test extends WP_UnitTestCase {
 		$input = array();
 		$input_virtual_columns = 'country' . PHP_EOL . 'region';
 		$input['postmeta_json'] = $input_virtual_columns;
-		$beyond_wpdb_settings_page->create_virtual_column( $input );
+		$beyond_wpdb_settings_page->create_virtual_column_and_index( $input );
 
 		$args = array(
 			'meta_query' => array(
@@ -739,7 +739,7 @@ class Beyond_Wpdb_Meta_Query_Test extends WP_UnitTestCase {
 		$input = array();
 		$input_virtual_columns = 'country' . PHP_EOL . 'region';
 		$input['postmeta_json'] = $input_virtual_columns;
-		$beyond_wpdb_settings_page->create_virtual_column( $input );
+		$beyond_wpdb_settings_page->create_virtual_column_and_index( $input );
 
 		$args = array(
 			'meta_query' => array(
@@ -786,7 +786,7 @@ class Beyond_Wpdb_Meta_Query_Test extends WP_UnitTestCase {
 		$input = array();
 		$input_virtual_columns = 'height' . PHP_EOL . 'weight';
 		$input['postmeta_json'] = $input_virtual_columns;
-		$beyond_wpdb_settings_page->create_virtual_column( $input );
+		$beyond_wpdb_settings_page->create_virtual_column_and_index( $input );
 
 		$args = array(
 			'meta_query' => array(
@@ -832,7 +832,7 @@ class Beyond_Wpdb_Meta_Query_Test extends WP_UnitTestCase {
 		$input = array();
 		$input_virtual_columns = 'country' . PHP_EOL . 'region';
 		$input['postmeta_json'] = $input_virtual_columns;
-		$beyond_wpdb_settings_page->create_virtual_column( $input );
+		$beyond_wpdb_settings_page->create_virtual_column_and_index( $input );
 
 		$args = array(
 			'meta_query' => array(
@@ -870,7 +870,7 @@ class Beyond_Wpdb_Meta_Query_Test extends WP_UnitTestCase {
 		$input = array();
 		$input_virtual_columns = 'language' . PHP_EOL . 'hobby';
 		$input['usermeta_json'] = $input_virtual_columns;
-		$beyond_wpdb_settings_page->create_virtual_column( $input );
+		$beyond_wpdb_settings_page->create_virtual_column_and_index( $input );
 
 		$args = array(
 			'meta_query' => array(
@@ -911,7 +911,7 @@ class Beyond_Wpdb_Meta_Query_Test extends WP_UnitTestCase {
 		$input = array();
 		$input_virtual_columns = 'rating';
 		$input['commentmeta_json'] = $input_virtual_columns;
-		$beyond_wpdb_settings_page->create_virtual_column( $input );
+		$beyond_wpdb_settings_page->create_virtual_column_and_index( $input );
 
 		$args = array(
 			'meta_query' => array(
@@ -961,7 +961,7 @@ class Beyond_Wpdb_Meta_Query_Test extends WP_UnitTestCase {
 		$input['postmeta_json'] = '';
 		$input['usermeta_json'] = '';
 		$input['commentmeta_json'] = '';
-		$beyond_wpdb_settings_page->create_virtual_column( $input );
+		$beyond_wpdb_settings_page->delete_virtual_column( $input );
 	}
 
 	/**
