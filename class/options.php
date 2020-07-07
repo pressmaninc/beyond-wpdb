@@ -3,6 +3,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Class Beyond_Wpdb_Settings_page
+ * Create Beyond Wpdb Settings Page
+ */
 class Beyond_Wpdb_Settings_page {
 	private $columns = array();
 
@@ -16,8 +20,15 @@ class Beyond_Wpdb_Settings_page {
 		$beyond_wpdb_column = new Beyond_Wpdb_Column();
 		$beyond_wpdb_column->set_columns();
 		$this->columns = $beyond_wpdb_column->get_columns();
-		$options = get_option('beyond_wpdb_data_init_name');
-		print_r($options);
+
+		// add option beyond_wpdb_virtual_column_name
+		add_action( 'add_option_beyond_wpdb_virtual_column_name', array( $this, 'do_after_add_virtual_column' ) ,10, 2 );
+		// add option beyond_wpdb_data_init_name
+		add_action( 'add_option_beyond_wpdb_data_init_name', array( $this, 'do_after_add_data_init' ) ,10, 2 );
+		// update option beyond_wpdb_virtual_column_name
+		add_action( 'update_option_beyond_wpdb_virtual_column_name', array( $this, 'do_after_update_virtual_column' ) ,10, 3 );
+		// update option beyond_wpdb_data_init_name
+		add_action( 'update_option_beyond_wpdb_data_init_name', array ( $this, 'do_after_update_data_init' ) ,10, 3 );
 
 	}
 
@@ -157,6 +168,60 @@ class Beyond_Wpdb_Settings_page {
 	}
 
 	/**
+	 * @param $option
+	 * @param $value
+	 */
+	public function do_after_add_virtual_column( $option, $value ) {
+		$this->do_virtual_column_processing( $option );
+	}
+
+	/**
+	 * @param $option
+	 * @param $value
+	 */
+	public function do_after_add_data_init( $option, $value ) {
+		$this->do_data_init_processing( $option );
+	}
+
+	/**
+	 * @param $old
+	 * @param $value
+	 * @param $option
+	 */
+	public function do_after_update_virtual_column( $old, $value, $option ) {
+		$this->do_virtual_column_processing( $option );
+	}
+
+	/**
+	 * @param $old
+	 * @param $value
+	 * @param $option
+	 */
+	public function do_after_update_data_init( $old, $value, $option ) {
+		$this->do_data_init_processing( $option );
+	}
+
+
+	/**
+	 * @param $option
+	 * create virtual column and delete virtual column and delete option
+	 */
+	public function do_virtual_column_processing( $option ) {
+		$this->create_virtual_column_and_index( get_option($option) );
+		$this->delete_virtual_column( get_option($option) );
+		delete_option( $option );
+	}
+
+	/**
+	 * @param $option
+	 * data init
+	 */
+	public function do_data_init_processing( $option ) {
+		$this->data_init( get_option($option) );
+		delete_option( $option );
+	}
+
+	/**
 	 * @param $input
 	 *
 	 * @return array
@@ -287,7 +352,6 @@ class Beyond_Wpdb_Settings_page {
 						$wpdb->query( $sql );
 					}
 				}
-
 			}
 		}
 	}
@@ -384,61 +448,7 @@ class Beyond_Wpdb_Settings_page {
 
 $my_settings_page = new Beyond_Wpdb_Settings_page();
 
-/**
- * @param $option
- * create virtual column and delete virtual column and delete option
- */
-function do_virtual_column_processing( $option ) {
-	$beyond_wpdb_settings_page = new Beyond_Wpdb_Settings_page();
-	$beyond_wpdb_settings_page->create_virtual_column_and_index( get_option($option) );
-	$beyond_wpdb_settings_page->delete_virtual_column( get_option($option) );
 
-	delete_option( $option );
-}
-
-/**
- * @param $option
- * data init
- */
-function do_data_init_processing( $option ) {
-	$beyond_wpdb_settings_page = new Beyond_Wpdb_Settings_page();
-	$beyond_wpdb_settings_page->data_init( get_option($option) );
-
-	delete_option( $option );
-}
-
-// add option
-/**
- * add option beyond_wpdb_virtual_column_name
- */
-add_action( 'add_option_beyond_wpdb_virtual_column_name', 'do_after_add_virtual_column' ,10, 2 );
-function do_after_add_virtual_column( $option, $value ) {
-	do_virtual_column_processing( $option );
-}
-/**
- * add option beyond_wpdb_data_init_name
- */
-add_action( 'add_option_beyond_wpdb_data_init_name', 'do_after_add_data_init' ,10, 2 );
-function do_after_add_data_init( $option, $value ) {
-	do_data_init_processing( $option );
-}
-
-// update option
-/**
- * update option beyond_wpdb_virtual_column_name
- */
-add_action( 'update_option_beyond_wpdb_virtual_column_name', 'do_after_update_virtual_column' ,10, 3 );
-function do_after_update_virtual_column( $old, $value, $option ) {
-	do_virtual_column_processing( $option );
-}
-
-/**
- * update option beyond_wpdb_data_init_name
- */
-add_action( 'update_option_beyond_wpdb_data_init_name', 'do_after_update_data_init' ,10, 3 );
-function do_after_update_data_init( $old, $value, $option ) {
-	do_data_init_processing( $option );
-}
 
 
 

@@ -5,13 +5,12 @@
  * @package Beyond_Wpdb
  */
 
-class Beyond_Wpdb_Performance_Test extends WP_UnitTestCase {
+require_once( plugin_dir_path( __FILE__ ) . 'beyond-wpdb-test.php' );
+
+class Beyond_Wpdb_Performance_Test extends Beyond_Wpdb_Test {
 
 	public function setUp()
 	{
-
-		$register_hook = new Beyond_Wpdb_Register_Hook();
-		$register_hook::activation();
 
 		parent::setUp();
 
@@ -22,16 +21,6 @@ class Beyond_Wpdb_Performance_Test extends WP_UnitTestCase {
 			}
 		}
 	}
-
-	public function tearDown()
-	{
-		parent::tearDown();
-
-		$this->delete_virtual_columns();
-		$register_hook = new Beyond_Wpdb_Register_Hook();
-		$register_hook::deactivation();
-	}
-
 
 	/**
 	 * test performance not equal
@@ -574,19 +563,6 @@ class Beyond_Wpdb_Performance_Test extends WP_UnitTestCase {
 		$input = array();
 		$input[$type . 'meta_json'] = 'category';
 		$beyond_wpdb_settings_page->create_virtual_column_and_index( $input );
-	}
-
-	/**
-	 * delete virtual columns from all meta_json tables for test
-	 */
-	protected function delete_virtual_columns()
-	{
-		$beyond_wpdb_settings_page = new Beyond_Wpdb_Settings_page();
-		$input = array();
-		$input['postmeta_json'] = '';
-		$input['usermeta_json'] = '';
-		$input['commentmeta_json'] = '';
-		$beyond_wpdb_settings_page->delete_virtual_column( $input );
 	}
 
 }

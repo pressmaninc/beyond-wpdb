@@ -5,25 +5,9 @@
  * @package Beyond_Wpdb
  */
 
-class Beyond_Wpdb_OrderBy_Test extends WP_UnitTestCase {
+require_once( plugin_dir_path( __FILE__ ) . 'beyond-wpdb-test.php' );
 
-	public function setUp()
-	{
-		$register_hook = new Beyond_Wpdb_Register_Hook();
-		$register_hook::activation();
-
-		parent::setUp();
-	}
-
-	public function tearDown()
-	{
-		parent::tearDown();
-
-		$this->delete_virtual_columns();
-		$register_hook = new Beyond_Wpdb_Register_Hook();
-		$register_hook::deactivation();
-	}
-
+class Beyond_Wpdb_OrderBy_Test extends Beyond_Wpdb_Test {
 
 	/**
 	 * Wp_Query orderby test
@@ -276,7 +260,7 @@ class Beyond_Wpdb_OrderBy_Test extends WP_UnitTestCase {
 		$beyond_wpdb_settings_page = new Beyond_Wpdb_Settings_page();
 		$input = array();
 		$input['postmeta_json'] = 'region';
-		$beyond_wpdb_settings_page->create_virtual_column( $input );
+		$beyond_wpdb_settings_page->create_virtual_column_and_index( $input );
 
 		$the_query = new WP_Query( $args );
 
@@ -323,28 +307,14 @@ class Beyond_Wpdb_OrderBy_Test extends WP_UnitTestCase {
 		$beyond_wpdb_settings_page = new Beyond_Wpdb_Settings_page();
 		$input = array();
 		$input['postmeta_json'] = 'state' . PHP_EOL . 'city';
-		$beyond_wpdb_settings_page->create_virtual_column( $input );
+		$beyond_wpdb_settings_page->create_virtual_column_and_index( $input );
 
 		$the_query = new WP_Query( $args );
-		print_r( $the_query->request );
 
 		$pos = strpos( $the_query->request, 'ORDER' );
 		$result = substr( $the_query->request, $pos );
 		$result = trim( strstr( $result, 'LIMIT', true ) );
 		$this->assertEquals( $expected_value, $result );
-	}
-
-	/**
-	 * delete virtual columns from all meta_json tables for test
-	 */
-	protected function delete_virtual_columns()
-	{
-		$beyond_wpdb_settings_page = new Beyond_Wpdb_Settings_page();
-		$input = array();
-		$input['postmeta_json'] = '';
-		$input['usermeta_json'] = '';
-		$input['commentmeta_json'] = '';
-		$beyond_wpdb_settings_page->create_virtual_column( $input );
 	}
 
 }

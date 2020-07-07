@@ -5,23 +5,9 @@
  * @package Beyond_Wpdb
  */
 
-class Beyond_Wpdb_Options_Page_TEST extends WP_UnitTestCase {
+require_once( plugin_dir_path( __FILE__ ) . 'beyond-wpdb-test.php' );
 
-	public function setUp()
-	{
-		$register_hook = new Beyond_Wpdb_Register_Hook();
-		$register_hook::activation();
-
-		parent::setUp();
-	}
-
-	public function tearDown()
-	{
-		parent::tearDown();
-
-		$register_hook = new Beyond_Wpdb_Register_Hook();
-		$register_hook::deactivation();
-	}
+class Beyond_Wpdb_Options_Page_TEST extends Beyond_Wpdb_Test {
 
 	/**
 	 * create virtual column test
@@ -65,9 +51,10 @@ class Beyond_Wpdb_Options_Page_TEST extends WP_UnitTestCase {
 		$input = array();
 		$expected_array = array();
 
-		// Removing virtual columns created by test_create_virtual_column
+		// delete virtual columns
 		$input['postmeta_json'] = '';
 		$beyond_wpdb_settings_page->delete_virtual_column( $input );
+
 
 		$table_name = esc_sql( constant( beyond_wpdb_get_define_table_name( 'post' ) ) );
 		$result_array = $wpdb->get_results( "show columns from {$table_name} where Field not in ('post_id', 'user_id', 'comment_id', 'json')" );
