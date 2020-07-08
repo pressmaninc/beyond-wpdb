@@ -305,6 +305,8 @@ class Beyond_Wpdb_Settings_page {
 
 				foreach ( $option as $value ) {
 
+					$value = $wpdb->_real_escape($value);
+
 					// If $value already exists, continue
 					if ( in_array( $value, $exist_columns ) ) {
 						continue;
