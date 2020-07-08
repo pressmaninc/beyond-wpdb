@@ -1,7 +1,7 @@
 === Beyond Wpdb ===
-Contributors: pressman,kazunao,hiroshisekiguchi,hommakoharu,pmhirotaka
-Tags: pressman、json、meta_query
-Stable tag: 1.0
+Contributors: pressmaninc,kazunao,hiroshisekiguchi,hommakoharu,pmhirotaka
+Tags: pressman,pressmaninc,json,meta_query,wpdb,database,fast,speed,speed up,sql,replace sql
+Stable tag: 1.0.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 Requires Wordpress: 5.4
