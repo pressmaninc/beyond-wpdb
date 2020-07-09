@@ -207,8 +207,8 @@ class Beyond_Wpdb_Settings_page {
 	 * create virtual column and delete virtual column and delete option
 	 */
 	public function do_virtual_column_processing( $option ) {
-		$this->create_virtual_column_and_index( get_option($option) );
-		$this->delete_virtual_column( get_option($option) );
+		$this->create_virtual_column_and_index( get_option( $option ) );
+		$this->delete_virtual_column( get_option( $option ) );
 		delete_option( $option );
 	}
 
@@ -305,7 +305,7 @@ class Beyond_Wpdb_Settings_page {
 
 				foreach ( $option as $value ) {
 
-					$value = $wpdb->_real_escape($value);
+					$value = esc_sql( $value );
 
 					// If $value already exists, continue
 					if ( in_array( $value, $exist_columns ) ) {
