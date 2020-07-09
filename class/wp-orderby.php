@@ -54,7 +54,7 @@ class Beyond_Wpdb_Orderby {
 					}
 
 					if ( in_array( $clause_key, $_orderby ) ) {
-						$orderby[$key] = "CAST(JSON_EXTRACT($alias.json, '$.{$clause['key']}') AS {$clause['cast']}) $order";
+						$orderby[$key] = $this->get_orderby_clause( $alias, $clause, $type, True ) . ' ' . $order;
 					}
 
 				} elseif ( strpos( $val, 'meta_value' ) ) {
@@ -65,11 +65,7 @@ class Beyond_Wpdb_Orderby {
 						}
 					}
 
-					if ( ! empty( $clause['type'] ) ) {
-						$orderby[$key] = "CAST(JSON_EXTRACT($alias.json, '$.{$clause['key']}') AS {$clause['cast']}) $order";
-					} else {
-						$orderby[$key] = "JSON_EXTRACT($alias.json, '$.{$clause['key']}') $order";
-					}
+					$orderby[$key] = $this->get_orderby_clause( $alias, $clause, $type ) . ' ' . $order;
 				}
 
 			}
@@ -97,6 +93,32 @@ class Beyond_Wpdb_Orderby {
 		//　Convert only if it is joined with the json table and an orderby clause is specified.
 		return $beyond_wpdb_meta_query->check( $query->meta_query->queries ) && ( isset( $q['orderby'] ) && $q['orderby'] !== '' );
 
+	}
+
+	/**
+	 * @param $alias
+	 * @param $clause
+	 * @param $type
+	 * @param bool $cast
+	 * Generates an orderby clause by checking whether the orderby clause is a virtual column
+	 * @return string
+	 */
+	protected function get_orderby_clause( $alias, $clause, $type, $cast = False ) {
+		$beyond_wpdb_meta_query = new Beyond_Wpdb_Meta_Query();
+		$virtual_column_exists = $beyond_wpdb_meta_query->virtual_column_exists( $clause['key'], $type );
+		$orderby = '';
+
+		if ( $virtual_column_exists ) {
+			$orderby = empty( $clause['type'] ) && ! $cast
+				? "$alias.{$clause['key']}"
+				: "CAST($alias.{$clause['key']} AS {$clause['cast']})";
+		} else {
+			$orderby = empty( $clause['type'] ) && ! $cast
+				? "JSON_EXTRACT($alias.json, '$.{$clause['key']}')"
+				: "CAST(JSON_EXTRACT($alias.json, '$.{$clause['key']}') AS {$clause['cast']})";
+		}
+
+		return $orderby;
 	}
 }
 
