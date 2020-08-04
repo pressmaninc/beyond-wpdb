@@ -1,6 +1,7 @@
 <?php
+require_once ABSPATH . 'wp-admin/includes/ajax-actions.php';
 
-class Beyond_Wpdb_Test extends WP_UnitTestCase {
+class Beyond_Wpdb_Ajax_Test extends WP_Ajax_UnitTestCase {
 	public function setUp()
 	{
 		$register_hook = new Beyond_Wpdb_Register();

@@ -5,40 +5,88 @@
  * @package Beyond_Wpdb
  */
 
-require_once( plugin_dir_path( __FILE__ ) . 'beyond-wpdb-test.php' );
+require_once( plugin_dir_path( __FILE__ ) . 'beyond-wpdb-ajax-test.php' );
 
-class Beyond_Wpdb_Options_Page_TEST extends Beyond_Wpdb_Test {
+class Beyond_Wpdb_Options_Page_TEST extends Beyond_Wpdb_Ajax_Test {
 
 	/**
-	 * create virtual column test
+	 * Get exist json tables test
 	 */
-	public function test_create_virtual_column()
+	public function test_get_exist_json_tables()
 	{
 		global $wpdb;
-		$beyond_wpdb_settings_page = new Beyond_Wpdb_Settings_page();
-		$input = array();
-		$expected_array = array( 'country', 'region' );
+		$action = 'get-exist-tables-action';
 
-		// create a post
-		$post_id = $this->factory->post->create();
-		add_post_meta( $post_id, 'country', 'japan', false );
-		add_post_meta( $post_id, 'region', 'tokyo', false );
-
-		// create virtual columns
-		$input_virtual_columns = 'country' . PHP_EOL . 'region';
-		$input['postmeta_json'] = $input_virtual_columns;
-		$beyond_wpdb_settings_page->create_virtual_column_and_index( $input );
-
-		// get virtual columns
-		$table_name = esc_sql( constant( beyond_wpdb_get_define_table_name( 'post' ) ) );
-		$result = $wpdb->get_results( "show columns from {$table_name} where Field not in ('post_id', 'user_id', 'comment_id', 'json')" );
-
-		$result_array = array();
-		foreach ( $result as $value ) {
-			array_push( $result_array, $value->Field );
+		$_POST['action'] = $action;
+		$_POST['nonce'] = wp_create_nonce( $action );
+		try {
+			$this->_handleAjax( $action );
+		} catch ( WPAjaxDieContinueException $e ) {
+			unset( $e );
 		}
 
-		$this->assertEquals( $expected_array, $result_array );
+		$response = json_decode( $this->_last_response, true );
+		$expected = array( "{$wpdb->prefix}commentmeta_beyond", "{$wpdb->prefix}usermeta_beyond", "{$wpdb->prefix}postmeta_beyond" );
+
+		$this->assertEqualSets( $expected, $response['data'] );
+	}
+
+	public function test_get_virtual_columns()
+	{
+		global $wpdb;
+		$action = 'get-virtual-columns-action';
+
+		// create virtual columns
+		$new_virtual_columns = array( 'country', 'city', 'population' );
+		foreach ( $new_virtual_columns as $value ) {
+			$json_key = '$.' . $value;
+			$sql = "ALTER TABLE {$wpdb->prefix}postmeta_beyond ADD {$value} VARCHAR(255) GENERATED ALWAYS AS ( JSON_UNQUOTE( JSON_EXTRACT( json, '$json_key' ) ) )";
+			$wpdb->query( $sql );
+		}
+
+		// get virtual columns
+		$_POST['action'] = $action;
+		$_POST['nonce'] = wp_create_nonce( $action );
+		try {
+			$this->_handleAjax( $action );
+		} catch ( WPAjaxDieContinueException $e ) {
+			unset( $e );
+		}
+
+		$response = json_decode( $this->_last_response, true );
+
+		$this->assertEqualSets( $new_virtual_columns, $response['data']["{$wpdb->prefix}postmeta_beyond"] );
+	}
+
+	/**
+	 * Create virtual columns test
+	 */
+	public function test_create_virtual_columns()
+	{
+		global $wpdb;
+		$action = 'create-virtual-columns-action';
+
+		// create virtual columns
+		$_POST['action'] = $action;
+		$_POST['nonce'] = wp_create_nonce( $action );
+		$_POST['primary'] = 'post';
+		$_POST['columns'] = 'country' . PHP_EOL . 'city' . PHP_EOL . 'population';
+		try {
+			$this->_handleAjax( $action );
+		} catch ( WPAjaxDieContinueException $e ) {
+			unset( $e );
+		}
+
+		// get virtual columns
+		$expected = array( "country", "city", "population" );
+		$sql = "SHOW COLUMNS FROM {$wpdb->prefix}postmeta_beyond WHERE Field NOT IN ('post_id', 'user_id', 'comment_id', 'json')";
+		$virtual_columns = $wpdb->get_results( $sql );
+		$result = array();
+		foreach ( $virtual_columns as $value ) {
+			array_push( $result, $value->Field );
+		}
+
+		$this->assertEqualSets( $expected, $result );
 	}
 
 	/**
@@ -47,19 +95,36 @@ class Beyond_Wpdb_Options_Page_TEST extends Beyond_Wpdb_Test {
 	public function test_delete_virtual_column()
 	{
 		global $wpdb;
-		$beyond_wpdb_settings_page = new Beyond_Wpdb_Settings_page();
-		$input = array();
-		$expected_array = array();
+		$action = 'create-virtual-columns-action';
+
+		// create virtual columns
+		$new_virtual_columns = array( 'country', 'city', 'population' );
+		foreach ( $new_virtual_columns as $value ) {
+			$json_key = '$.' . $value;
+			$sql = "ALTER TABLE {$wpdb->prefix}postmeta_beyond ADD {$value} VARCHAR(255) GENERATED ALWAYS AS ( JSON_UNQUOTE( JSON_EXTRACT( json, '$json_key' ) ) )";
+			$wpdb->query( $sql );
+		}
 
 		// delete virtual columns
-		$input['postmeta_json'] = '';
-		$beyond_wpdb_settings_page->delete_virtual_column( $input );
+		$_POST['action'] = $action;
+		$_POST['nonce'] = wp_create_nonce( $action );
+		$_POST['primary'] = 'post';
+		$_POST['columns'] = '';
+		try {
+			$this->_handleAjax( $action );
+		} catch ( WPAjaxDieContinueException $e ) {
+			unset( $e );
+		}
 
+		// get virtual columns
+		$sql = "SHOW COLUMNS FROM {$wpdb->prefix}postmeta_beyond WHERE Field NOT IN ('post_id', 'user_id', 'comment_id', 'json')";
+		$virtual_columns = $wpdb->get_results( $sql );
+		$result = array();
+		foreach ( $virtual_columns as $value ) {
+			array_push( $result, $value->Field );
+		}
 
-		$table_name = esc_sql( constant( beyond_wpdb_get_define_table_name( 'post' ) ) );
-		$result_array = $wpdb->get_results( "show columns from {$table_name} where Field not in ('post_id', 'user_id', 'comment_id', 'json')" );
-
-		$this->assertEquals( $expected_array, $result_array );
+		$this->assertEqualSets( array(), $result );
 	}
 
 }

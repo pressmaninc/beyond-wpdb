@@ -7,36 +7,44 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Beyond Wpdb table and trigger SQL.
  */
 class Beyond_Wpdb_Sql {
+
 	function __construct() {
 		global $wpdb;
 
 		foreach( array_keys( BEYOND_WPDB_PRIMARYS ) as $primary ) {
+			$this->triggers[$primary] = array();
+
 			$insert_trigger = 'insert_' . $primary . '_trigger';
 			$this->$insert_trigger = esc_sql( $wpdb->prefix . 'insert_' . $primary . '_trigger' );
+			array_push( $this->triggers[$primary], $this->$insert_trigger );
 
 			$delete_trigger = 'delete_' . $primary . '_trigger';
 			$this->$delete_trigger = esc_sql( $wpdb->prefix . 'delete_' . $primary . '_trigger' );
+			array_push( $this->triggers[$primary], $this->$delete_trigger );
 
 			$insert_meta_trigger = 'insert_' . $primary . 'meta_trigger';
 			$this->$insert_meta_trigger = esc_sql( $wpdb->prefix . 'insert_' . $primary . 'meta_trigger' );
+			array_push( $this->triggers[$primary], $this->$insert_meta_trigger );
 
 			$update_meta_trigger = 'update_' . $primary . 'meta_trigger';
 			$this->$update_meta_trigger = esc_sql( $wpdb->prefix . 'update_' . $primary . 'meta_trigger' );
+			array_push( $this->triggers[$primary], $this->$update_meta_trigger );
 
 			$delete_meta_trigger = 'delete_' . $primary . 'meta_trigger';
 			$this->$delete_meta_trigger = esc_sql( $wpdb->prefix . 'delete_' . $primary . 'meta_trigger' );
+			array_push( $this->triggers[$primary], $this->$delete_meta_trigger );
 		}
 	}
 
 	/**
 	 * Create table
 	 *
+	 * @param string $type
 	 * @return void
 	 */
-	function create_table() : void {
-		foreach( BEYOND_WPDB_PRIMARYS as $primary => $values ) {
-			$this->create_table_sql( $primary, $values['meta_table_key'] );
-		}
+	function create_table( $primary ) : void {
+		$values = BEYOND_WPDB_PRIMARYS[$primary];
+		$this->create_table_sql( $primary, $values['meta_table_key'] );
 	}
 
 	/**
@@ -65,12 +73,12 @@ class Beyond_Wpdb_Sql {
 	/**
 	 * Drop table
 	 *
+	 * @param $primary
 	 * @return void
+	 * @throws Exception
 	 */
-	function drop_table() {
-		foreach( array_keys( BEYOND_WPDB_PRIMARYS ) as $primary ) {
-			$this->drop_table_sql( $primary );
-		}
+	function drop_table( $primary ) {
+		$this->drop_table_sql( $primary );
 	}
 
 	/**
@@ -78,13 +86,22 @@ class Beyond_Wpdb_Sql {
 	 *
 	 * @param string $primary
 	 * @return void
+	 * @throws Exception
 	 */
 	protected function drop_table_sql( $primary ) {
 		global $wpdb;
+
+		$exist_tables = $this->get_exist_json_tables();
 		$table_name = esc_sql( constant( beyond_wpdb_get_define_table_name( $primary ) ) );
 
-		$sql = 'DROP TABLE ' . $table_name;
-		$wpdb->query( $sql );
+		if ( in_array( $table_name, $exist_tables ) ) {
+			$sql = 'DROP TABLE ' . $table_name;
+			$wpdb->query( $sql );
+
+			if ( $wpdb->last_error ) {
+				throw new Exception( $wpdb->last_error );
+			}
+		}
 	}
 
 	/**
@@ -92,17 +109,17 @@ class Beyond_Wpdb_Sql {
 	 * Insert/Delete posts trigger
 	 * Insert/Update/Delete postmeta trigger
 	 *
+	 * @param string $primary
 	 * @return void
+	 * @throws Exception
 	 */
-	function create_trigger() {
-		foreach( BEYOND_WPDB_PRIMARYS as $primary => $values ) {
-			$this->insert_primary_trigger( $primary, $values['primary_table_name'], $values['primary_table_key'], $values['meta_table_key'] );
-			$this->delete_primary_trigger( $primary, $values['primary_table_name'], $values['primary_table_key'], $values['meta_table_key'] );
-			$this->insert_meta_trigger( $primary, $values['meta_table_name'], $values['meta_table_key'] );
-			$this->update_meta_trigger( $primary, $values['meta_table_name'], $values['meta_table_key'] );
-			$this->delete_meta_trigger( $primary, $values['meta_table_name'], $values['meta_table_key'] );
-
-		}
+	function create_trigger( $primary ) {
+		$values = BEYOND_WPDB_PRIMARYS[$primary];
+		$this->insert_primary_trigger( $primary, $values['primary_table_name'], $values['primary_table_key'], $values['meta_table_key'] );
+		$this->delete_primary_trigger( $primary, $values['primary_table_name'], $values['primary_table_key'], $values['meta_table_key'] );
+		$this->insert_meta_trigger( $primary, $values['meta_table_name'], $values['meta_table_key'] );
+		$this->update_meta_trigger( $primary, $values['meta_table_name'], $values['meta_table_key'] );
+		$this->delete_meta_trigger( $primary, $values['meta_table_name'], $values['meta_table_key'] );
 	}
 
 	/**
@@ -113,17 +130,20 @@ class Beyond_Wpdb_Sql {
 	 * @param string $primary_table_key
 	 * @param string $meta_table_key
 	 * @return void
+	 * @throws Exception
 	 */
 	protected function insert_primary_trigger( $primary, $primaty_table_name, $primary_table_key, $meta_table_key ) {
 		global $wpdb;
 
 		$insert_trigger = 'insert_' . $primary . '_trigger';
+		$exist_triggers = $this->get_exist_triggers();
 		$table_name = esc_sql( constant( beyond_wpdb_get_define_table_name( $primary ) ) );
 		$primaty_table_name = esc_sql( $primaty_table_name );
 		$meta_table_key = esc_sql( $meta_table_key );
 		$primary_table_key = esc_sql( $primary_table_key );
 
-		$sql = 'CREATE TRIGGER ' . $this->$insert_trigger . ' AFTER
+		if ( ! in_array( $this->$insert_trigger, $exist_triggers ) ) {
+			$sql = 'CREATE TRIGGER ' . $this->$insert_trigger . ' AFTER
 				INSERT ON
 				' . $primaty_table_name . '
 				FOR
@@ -133,7 +153,12 @@ class Beyond_Wpdb_Sql {
 					(' . $meta_table_key . ', json)
 				VALUES
 					(NEW.' . $primary_table_key . ', "{}" )';
-		$wpdb->query( $sql );
+			$wpdb->query( $sql );
+
+			if ( $wpdb->last_error ) {
+				throw new Exception( $wpdb->last_error );
+			}
+		}
 	}
 
 	/**
@@ -144,25 +169,33 @@ class Beyond_Wpdb_Sql {
 	 * @param string $primary_table_key
 	 * @param string $meta_table_key
 	 * @return void
+	 * @throws Exception
 	 */
 	protected function delete_primary_trigger( $primary, $primaty_table_name, $primary_table_key, $meta_table_key ) {
 		global $wpdb;
 
 		$delete_trigger = 'delete_' . $primary . '_trigger';
+		$exist_triggers = $this->get_exist_triggers();
 		$table_name = esc_sql( constant( beyond_wpdb_get_define_table_name( $primary ) ) );
 		$primaty_table_name = esc_sql( $primaty_table_name );
 		$meta_table_key = esc_sql( $meta_table_key );
 		$primary_table_key = esc_sql( $primary_table_key );
 
-		$sql = 'CREATE TRIGGER ' . $this->$delete_trigger . ' BEFORE
-		DELETE ON
-		' . $primaty_table_name . '
-		FOR
-		EACH
-		ROW
-		DELETE FROM ' . $table_name . '
-		WHERE ' . $meta_table_key . ' = OLD.' . $primary_table_key;
-		$wpdb->query( $sql );
+		if ( ! in_array( $this->$delete_trigger, $exist_triggers ) ) {
+			$sql = 'CREATE TRIGGER ' . $this->$delete_trigger . ' BEFORE
+			DELETE ON
+			' . $primaty_table_name . '
+			FOR
+			EACH
+			ROW
+			DELETE FROM ' . $table_name . '
+			WHERE ' . $meta_table_key . ' = OLD.' . $primary_table_key;
+			$wpdb->query( $sql );
+
+			if ( $wpdb->last_error ) {
+				throw new Exception( $wpdb->last_error );
+			}
+		}
 	}
 
 	/**
@@ -172,16 +205,19 @@ class Beyond_Wpdb_Sql {
 	 * @param string $meta_table_name
 	 * @param string $meta_table_key
 	 * @return void
+	 * @throws Exception
 	 */
 	protected function insert_meta_trigger( $primary, $meta_table_name, $meta_table_key ) {
 		global $wpdb;
 
+		$exist_triggers = $this->get_exist_triggers();
 		$insert_meta_trigger = 'insert_' . $primary . 'meta_trigger';
 		$table_name = esc_sql( constant( beyond_wpdb_get_define_table_name( $primary ) ) );
 		$meta_table_name = esc_sql( $meta_table_name );
 		$meta_table_key = esc_sql( $meta_table_key );
 
-		$sql = 'CREATE TRIGGER ' . $this->$insert_meta_trigger . ' AFTER
+		if ( ! in_array( $this->$insert_meta_trigger, $exist_triggers ) ) {
+			$sql = 'CREATE TRIGGER ' . $this->$insert_meta_trigger . ' AFTER
 				INSERT ON
 				' . $meta_table_name . '
 				FOR
@@ -192,7 +228,12 @@ class Beyond_Wpdb_Sql {
 				`json` = JSON_SET
 				(`json`, CONCAT
 				("$.",NEW.meta_key), NEW.meta_value) WHERE ' . $meta_table_key . ' = NEW.'.$meta_table_key;
-		$wpdb->query( $sql );
+			$wpdb->query( $sql );
+
+			if ( $wpdb->last_error ) {
+				throw new Exception( $wpdb->last_error );
+			}
+		}
 	}
 
 	/**
@@ -202,16 +243,19 @@ class Beyond_Wpdb_Sql {
 	 * @param string $meta_table_name
 	 * @param string $meta_table_key
 	 * @return void
+	 * @throws Exception
 	 */
 	protected function update_meta_trigger( $primary, $meta_table_name, $meta_table_key ) {
 		global $wpdb;
 
+		$exist_triggers = $this->get_exist_triggers();
 		$update_meta_trigger = 'update_' . $primary . 'meta_trigger';
 		$table_name = esc_sql( constant( beyond_wpdb_get_define_table_name( $primary ) ) );
 		$meta_table_name = esc_sql( $meta_table_name );
 		$meta_table_key = esc_sql( $meta_table_key );
 
-		$sql = 'CREATE TRIGGER ' . $this->$update_meta_trigger . ' AFTER
+		if ( ! in_array( $this->$update_meta_trigger, $exist_triggers ) ) {
+			$sql = 'CREATE TRIGGER ' . $this->$update_meta_trigger . ' AFTER
 				UPDATE ON
 				' . $meta_table_name . '
 				FOR
@@ -222,7 +266,12 @@ class Beyond_Wpdb_Sql {
 				`json` = JSON_SET
 				(`json`, CONCAT
 				("$.",NEW.meta_key), NEW.meta_value) WHERE ' . $meta_table_key . ' = NEW.' . $meta_table_key;
-		$wpdb->query( $sql );
+			$wpdb->query( $sql );
+
+			if ( $wpdb->last_error ) {
+				throw new Exception( $wpdb->last_error );
+			}
+		}
 	}
 
 	/**
@@ -232,16 +281,19 @@ class Beyond_Wpdb_Sql {
 	 * @param string $meta_table_name
 	 * @param string $meta_table_key
 	 * @return void
+	 * @throws Exception
 	 */
 	protected function delete_meta_trigger( $primary, $meta_table_name, $meta_table_key ) {
 		global $wpdb;
 
+		$exist_triggers = $this->get_exist_triggers();
 		$delete_meta_trigger = 'delete_' . $primary . 'meta_trigger';
 		$table_name = esc_sql( constant( beyond_wpdb_get_define_table_name( $primary ) ) );
 		$meta_table_name = esc_sql( $meta_table_name );
 		$meta_table_key = esc_sql( $meta_table_key );
 
-		$sql = 'CREATE TRIGGER ' . $this->$delete_meta_trigger . ' AFTER
+		if ( ! in_array( $this->$delete_meta_trigger, $exist_triggers ) ) {
+			$sql = 'CREATE TRIGGER ' . $this->$delete_meta_trigger . ' AFTER
 				DELETE ON
 				' . $meta_table_name . '
 				FOR
@@ -251,44 +303,68 @@ class Beyond_Wpdb_Sql {
 				SET
 				`json` = JSON_REMOVE(`json`, CONCAT
 				("$.",OLD.meta_key)) WHERE ' . $meta_table_key . ' = OLD.'. $meta_table_key;
-		$wpdb->query( $sql );
+			$wpdb->query( $sql );
+
+			if ( $wpdb->last_error ) {
+				throw new Exception( $wpdb->last_error );
+			}
+		}
 	}
 
 	/**
 	 * Drop triggers
 	 *
+	 * @param $primary
 	 * @return void
+	 * @throws Exception
 	 */
-	function drop_triggers() {
+	function drop_triggers( $primary ) {
 		global $wpdb;
 
-		foreach( get_object_vars( $this ) as $value ) {
-			$sql = 'DROP TRIGGER ' . esc_sql( $value );
-			$wpdb->query( $sql );
+		$exist_triggers = $this->get_exist_triggers();
+
+		foreach ( $this->triggers[$primary] as $value ) {
+			if ( in_array( $value, $exist_triggers ) ) {
+				$sql = 'DROP TRIGGER ' . esc_sql( $value );
+				$wpdb->query( $sql );
+			}
+		}
+
+		if ( $wpdb->last_error ) {
+			throw new Exception( $wpdb->last_error );
 		}
 	}
 
 	/**
 	 * Update table from post, postmeta table.
 	 *
-	 * @return void
+	 * @param $primary
+	 *
+	 * @throws Exception
 	 */
-	function data_init() {
-		foreach( BEYOND_WPDB_PRIMARYS as $primary => $values ) {
-			$this->data_init_sql( $primary, $values['primary_table_name'], $values['primary_table_key'], $values['meta_table_name'], $values['meta_table_key'] );
-			$this->delete_non_existent_data_from_json( $primary, $values['primary_table_name'], $values['primary_table_key'] );
-		}
+	function data_init( $primary ) {
+		global $wpdb;
+		$values = BEYOND_WPDB_PRIMARYS[$primary];
+		$maxlen = 4294967295;
+
+		$maxlen = apply_filters( 'beyond_group_concat_max_len', $maxlen );
+		$sql = 'SET SESSION group_concat_max_len = ' . $maxlen;
+		$wpdb->query( $sql );
+
+		$this->data_init_sql( $primary, $values['primary_table_name'], $values['primary_table_key'], $values['meta_table_name'], $values['meta_table_key'] );
+		$this->delete_non_existent_data_from_json( $primary, $values['primary_table_name'], $values['primary_table_key'] );
 	}
 
 	/**
 	 * data init sql
 	 *
-	 * @param string $primary
-	 * @param string $primary_table_name
-	 * @param string $primary_table_key
-	 * @param string $meta_table_name
-	 * @param string $meta_table_key
-	 * @return void
+	 * @param $primary
+	 * @param $primary_table_name
+	 * @param $primary_table_key
+	 * @param $meta_table_name
+	 * @param $meta_table_key
+	 *
+	 * @throws Exception
 	 */
 	protected function data_init_sql( $primary, $primary_table_name, $primary_table_key, $meta_table_name, $meta_table_key ) {
 		global $wpdb;
@@ -310,6 +386,10 @@ class Beyond_Wpdb_Sql {
 				KEY
 				UPDATE json = VALUES(json)';
 		$wpdb->query( $sql );
+
+		if ( $wpdb->last_error ) {
+			throw new Exception( $wpdb->last_error );
+		}
 	}
 
 	/**
@@ -319,6 +399,7 @@ class Beyond_Wpdb_Sql {
 	 * @param $primary_table_name
 	 * @param $primary_table_key
 	 * @return void
+	 * @throws Exception
 	 */
 	protected function delete_non_existent_data_from_json( $primary, $primary_table_name, $primary_table_key ) {
 		global $wpdb;
@@ -333,6 +414,30 @@ class Beyond_Wpdb_Sql {
 		       ' NOT IN (SELECT ' . $primary_table_key . ' from ' . $primary_table_name . ')';
 
 		$wpdb->query( $sql );
+
+		if ( $wpdb->last_error ) {
+			throw new Exception( $wpdb->last_error );
+		}
+	}
+
+	/**
+	 * Get exist virtual columns
+	 * @return array
+	 */
+	protected function get_exist_triggers() {
+		$beyond_wpdb_info = new Beyond_Wpdb_Information();
+		$beyond_wpdb_info->set_triggers();
+		return $beyond_wpdb_info->get_triggers();
+	}
+
+	/**
+	 * Get exist json tables
+	 * @return array
+	 */
+	protected function get_exist_json_tables(){
+		$beyond_wpdb_info = new Beyond_Wpdb_Information();
+		$beyond_wpdb_info->set_tables();
+		return $beyond_wpdb_info->get_tables();
 	}
 }
 

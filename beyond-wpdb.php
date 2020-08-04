@@ -2,8 +2,8 @@
 /*
 Plugin Name: Beyond Wpdb
 Plugin URI:
-Description: Create a new table and register the meta data in a single row of JSON columns.Registration is done by mysql's trigger function.The data in WordPress is not affected.Convert sql statement, when searching for meta data.
-Version: 1.1.0
+Description: Speed up your WordPress database by making use of JSON type columns in MySQL.
+Version: 2.0.0
 Author: PRESSMAN
 Author URI: https://www.pressman.ne.jp/
 License: GPLv2 or later
@@ -44,18 +44,14 @@ define( 'BEYOND_WPDB_PRIMARYS', $beyond_wpdb_primarys );
 
 // Deifne Beyond_table name.
 foreach( array_keys( BEYOND_WPDB_PRIMARYS ) as $primary ) {
-	define( beyond_wpdb_get_define_table_name( $primary ), $wpdb->prefix . $primary . 'meta_json' );
+	define( beyond_wpdb_get_define_table_name( $primary ), $wpdb->prefix . $primary . 'meta_beyond' );
 }
 
 // Require files.
-require_once( plugin_dir_path( __FILE__ ) . 'class/register-hook.php' );
+require_once( plugin_dir_path( __FILE__ ) . 'class/register.php' );
+require_once( plugin_dir_path( __FILE__ ) . 'class/information.php' );
 require_once( plugin_dir_path( __FILE__ ) . 'class/sql.php' );
 require_once( plugin_dir_path( __FILE__ ) . 'class/meta-query.php' );
 require_once( plugin_dir_path( __FILE__ ) . 'class/wp-orderby.php' );
-require_once( plugin_dir_path( __FILE__ ) . 'class/column.php' );
 require_once( plugin_dir_path( __FILE__ ) . 'class/options.php' );
-
-// Plugin activation hook.
-register_activation_hook( __FILE__, ['Beyond_Wpdb_Register_Hook', 'activation'] );
-register_deactivation_hook( __FILE__, ['Beyond_Wpdb_Register_Hook', 'deactivation'] );
-register_uninstall_hook( __FILE__, ['Beyond_Wpdb_Register_Hook', 'uninstall'] );
+require_once( plugin_dir_path( __FILE__ ) . 'class/admin-ajax.php' );
