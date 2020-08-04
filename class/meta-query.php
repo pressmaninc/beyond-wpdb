@@ -466,11 +466,12 @@ class Beyond_Wpdb_Meta_Query {
 	 * @return bool
 	 */
 	public function virtual_column_exists( $key, $type ) {
-		$beyond_wpdb_column = new Beyond_Wpdb_Column();
-		$beyond_wpdb_column->set_columns();
-		$virtual_columns = $beyond_wpdb_column->get_columns();
+		$beyond_wpdb_info = new Beyond_Wpdb_Information();
+		$beyond_wpdb_info->set_columns();
+		$virtual_columns = $beyond_wpdb_info->get_columns();
+		$table_name = esc_sql( constant( beyond_wpdb_get_define_table_name( $type ) ) );
 
-		return in_array( $key, $virtual_columns[$type] );
+		return in_array( $key, $virtual_columns[$table_name] );
 	}
 
 	/**

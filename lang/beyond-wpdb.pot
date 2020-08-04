@@ -1,0 +1,134 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Beyond Wpdb 2.0.0 \n"
+"Report-Msgid-Bugs-To: \n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2020-07-16T18:03:38+00:00\n"
+"X-Generator: WP-CLI 2.5.0-alpha-c4c9f7e\n"
+"X-Domain: lang\n"
+
+#: options.php:74
+msgid "You do not have permission to create triggers."
+msgstr ""
+
+#: options.php:76
+msgid "You don't have SELECT permission."
+msgstr ""
+
+#: options.php:79
+msgid "You don't have INSERT permission."
+msgstr ""
+
+#: options.php:82
+msgid "You don't have UPDATE permission."
+msgstr ""
+
+#: options.php:85
+msgid "You don't have DELETE permission."
+msgstr ""
+
+#: options.php:88
+msgid "You don't have CREATE permission."
+msgstr ""
+
+#: options.php:91
+msgid "You don't have DROP permission."
+msgstr ""
+
+#: options.php:100
+msgid ""
+"Please check the version of the database.<br>"
+"MySQL: 5.7 and later.<br>"
+"MariaDB: 10.2 and later."
+msgstr ""
+
+#: options.php:109
+msgid ""
+"You do not have permission to the mysql database.<br>"
+"We access the db table in the mysql database to find out what permissions we have to use each feature.<br>"
+"There is a possibility that each function will not be available."
+msgstr ""
+
+#: options.php:120
+msgid "You do not have the following permissions.Please use each function after granting permission."
+msgstr ""
+
+#: options.php:150
+msgid ""
+"Speed up database loading by creating your own tables that aggregate meta information.<br>"
+"This is especially useful when you have a large number of records and for complex meta-query data calls."
+msgstr ""
+
+#: options.php:159
+msgid "Settings"
+msgstr ""
+
+#: options.php:185
+msgid "NOTICE"
+msgstr ""
+
+#: options.php:186
+msgid ""
+"This plugin sets 4294967295 to group_concat_max_len when it createa an original table with JSON type column.<br>"
+"You can change the number by using filter 'beyond_group_concat_max_len'."
+msgstr ""
+
+#: options.php:199
+msgid "Setting up MySQL"
+msgstr ""
+
+#: options.php:221
+msgid "Creating and deleting custom metatables"
+msgstr ""
+
+#: options.php:228
+#: options.php:278
+msgid "Table for postmeta"
+msgstr ""
+
+#: options.php:240
+#: options.php:290
+msgid "Table for usermeta"
+msgstr ""
+
+#: options.php:252
+#: options.php:302
+msgid "Table for commentmeta"
+msgstr ""
+
+#: options.php:271
+msgid "Virtual Column Settings"
+msgstr ""
+
+#: options.php:324
+msgid ""
+"When you enter a key of meta information separated by a new line,<br>"
+"the specified meta key from the JSON type column is set as a virtual column and the index is pasted.<br>"
+"You can further speed up data calls by specifying the most commonly used meta keys for meta queries."
+msgstr ""
+
+#: options.php:385
+msgid ""
+"This plugin aggregates the meta information and stores it in JSON type columns.<br>"
+"In MySQL, the maximum length of JSON is determined by the above values.<br>"
+"If the meta information is so large that the JSON is longer than this value, an error will occur.<br>"
+msgstr ""
+
+#: options.php:394
+msgid ""
+"Create and delete your own tables that aggregate the metadata. (Enabled to create, disabled to delete)<br>"
+"As long as it is enabled, all meta information will continue to be automatically registered, updated, and deleted in the JSON type columns of the relevant table.<br>"
+"When enabled, a new table will be created or initialized, which will take some time. When disabled, the table will be deleted."
+msgstr ""
+
+#: options.php:415
+msgid "activation"
+msgstr ""
+
+#: options.php:416
+msgid "deactivation"
+msgstr ""
