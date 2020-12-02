@@ -8,13 +8,12 @@ const BEYOND_WPDB = {
    *
    * @returns {Promise<*>}
    */
-    getExistJsonTablesApi: async() => {
+    getExistJsonTablesApi() {
         const formData = new FormData();
         formData.append( 'action', BEYOND_WPDB_CONFIG.exist_tables.get.action );
         formData.append( 'nonce', BEYOND_WPDB_CONFIG.exist_tables.get.nonce );
 
-        return await axios.post( BEYOND_WPDB_CONFIG.api, formData )
-            .catch( ( err ) => err.response );
+        return BEYOND_WPDB.api( formData );
     },
 
     /**
@@ -22,25 +21,21 @@ const BEYOND_WPDB = {
    *
    * @returns {Promise<*>}
    */
-    getExistVirtualColumnsApi: async() => {
+    getExistVirtualColumnsApi() {
         const formData = new FormData();
         formData.append( 'action', BEYOND_WPDB_CONFIG.virtual_columns.get.action );
         formData.append( 'nonce', BEYOND_WPDB_CONFIG.virtual_columns.get.nonce );
 
-        return await axios
-            .post( BEYOND_WPDB_CONFIG.api, formData )
-            .catch( ( err ) => err.response );
+        return BEYOND_WPDB.api( formData );
     },
-    createVirtualColumnsApi: async( primary, columns ) => {
+    createVirtualColumnsApi( primary, columns ) {
         const formData = new FormData();
         formData.append( 'action', BEYOND_WPDB_CONFIG.virtual_columns.create.action );
         formData.append( 'nonce', BEYOND_WPDB_CONFIG.virtual_columns.create.nonce );
         formData.append( 'primary', primary );
         formData.append( 'columns', columns );
 
-        return await axios
-            .post( BEYOND_WPDB_CONFIG.api, formData )
-            .catch( ( err ) => err.response );
+        return BEYOND_WPDB.api( formData );
     },
 
     /**
@@ -49,15 +44,13 @@ const BEYOND_WPDB = {
    * @param primary
    * @returns {Promise<*>}
    */
-    activateActionApi: async( primary ) => {
+    activateActionApi( primary ) {
         const formData = new FormData();
         formData.append( 'action', BEYOND_WPDB_CONFIG.data_init.create.action );
         formData.append( 'nonce', BEYOND_WPDB_CONFIG.data_init.create.nonce );
         formData.append( 'primary', primary );
 
-        return await axios
-            .post( BEYOND_WPDB_CONFIG.api, formData )
-            .catch( ( err ) => err.response );
+        return BEYOND_WPDB.api( formData );
     },
 
     /**
@@ -66,15 +59,44 @@ const BEYOND_WPDB = {
    * @param primary
    * @returns {Promise<*>}
    */
-    deactivateActionApi: async( primary ) => {
+    deactivateActionApi( primary ) {
         const formData = new FormData();
         formData.append( 'action', BEYOND_WPDB_CONFIG.data_init.delete.action );
         formData.append( 'nonce', BEYOND_WPDB_CONFIG.data_init.delete.nonce );
         formData.append( 'primary', primary );
 
-        return await axios
-            .post( BEYOND_WPDB_CONFIG.api, formData )
-            .catch( ( err ) => err.response );
+        return BEYOND_WPDB.api( formData );
+    },
+
+    /**
+   * send api
+   *
+   * @param formData
+   * @returns {Promise<*>}
+   */
+    api( formData ) {
+        return new Promise(function(resolve, reject) {
+            jQuery.ajax({
+                url: BEYOND_WPDB_CONFIG.api,
+                type: "POST",
+                async: true,
+                contentType: false,
+                processData: false,
+                data: formData,
+                dataType: "json",
+            }).then(
+                function (result, status, jqXHR) {
+                    const re = {
+                        data: result,
+                        status: jqXHR.status
+                    };
+                    resolve(re);
+                },
+                function () {
+                    reject();
+                }
+            )
+        });
     },
 
     /**

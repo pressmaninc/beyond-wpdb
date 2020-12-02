@@ -1,14 +1,14 @@
 === Beyond Wpdb ===
 Contributors: pressmaninc,kazunao,hiroshisekiguchi,hommakoharu,pmhirotaka
 Tags: pressman,pressmaninc,json,meta_query,wpdb,database,fast,speed,speed up,sql,replace sql
-Stable tag: 2.0.0
+Stable tag: 2.0.1
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
-Requires Wordpress: 5.4
+Requires Wordpress: 5.5.3
 Requires PHP: 7.0
 Requires MySQL: 5.7
 Requires MariaDB: 10.2
-Tested up to: 5.4
+Tested up to: 5.5.3
 
 ※ Table names have been changed since v2.0.Please delete the meta_json table and reactivate it in the options screen.
 

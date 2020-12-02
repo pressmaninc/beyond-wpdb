@@ -3,7 +3,7 @@
 Plugin Name: Beyond Wpdb
 Plugin URI:
 Description: Speed up your WordPress database by making use of JSON type columns in MySQL.
-Version: 2.0.0
+Version: 2.0.1
 Author: PRESSMAN
 Author URI: https://www.pressman.ne.jp/
 License: GPLv2 or later
