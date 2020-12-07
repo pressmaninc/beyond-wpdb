@@ -26,7 +26,6 @@ class Beyond_Wpdb_Admin_Ajax {
 		global $wpdb;
 		$handle = 'beyond-wpdb-script';
 
-		wp_enqueue_script( 'axios', 'https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js', array(), '', true );
 		wp_enqueue_script( $handle, plugin_dir_url( __FILE__ ) . '../js/beyond-wpdb.js', array('jquery'), '1.0', true );
 		// Localizing constants.
 		wp_localize_script( $handle, 'BEYOND_WPDB_CONFIG', [
